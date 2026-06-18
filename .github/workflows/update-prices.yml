@@ -49,3 +49,8 @@ jobs:
           git add data.json
           git commit -m "data: 自动更新成品油价格数据 [skip ci]"
           git push
+
+      - name: 发送微信通知
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          python scripts/send_notification.py "${{ secrets.SERVERCHAN_SENDKEY }}"
