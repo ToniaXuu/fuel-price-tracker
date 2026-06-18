@@ -31,6 +31,11 @@ LON = 117.00
 TZ = "Asia/Shanghai"
 
 
+def load_data():
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 # ========================== 天气 ==========================
 
 def fetch_weather():
