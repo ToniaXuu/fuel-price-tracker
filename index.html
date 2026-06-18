@@ -301,16 +301,8 @@
     .price-cell:nth-child(4) { border-top: 3px solid var(--slate); }
 
     /* ===== CHART AREA ===== */
-    .chart-wrap { position: relative; height: 380px; }
-    @media (max-width: 640px) { .chart-wrap { height: 300px; } }
-    .chart-legend {
-      display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;
-      margin-top: 16px; font-size: 13px;
-    }
-    .chart-legend span {
-      display: flex; align-items: center; gap: 6px;
-    }
-    .chart-legend .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .chart-wrap { position: relative; height: 480px; }
+    @media (max-width: 640px) { .chart-wrap { height: 360px; } }
 
     /* ===== TABLE ===== */
     .tbl-wrap { overflow-x: auto; }
@@ -547,19 +539,13 @@
   <!-- ========== 趋势图 ========== -->
   <div class="card reveal">
     <div class="section-title">济南成品油零售价格走势（元/升）</div>
-    <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
-    <div class="chart-legend">
-      <span><i class="dot" style="background:#3b82f6"></i> 92# 汽油</span>
-      <span><i class="dot" style="background:#8b5cf6"></i> 95# 汽油</span>
-      <span><i class="dot" style="background:#ef4444"></i> 98# 汽油</span>
-      <span><i class="dot" style="background:#374151"></i> 0# 柴油</span>
-    </div>
+    <div class="chart-wrap"><div id="mainChart" style="width:100%;height:100%"></div></div>
   </div>
 
   <!-- ========== 柱状图 ========== -->
   <div class="card reveal">
     <div class="section-title">历次调价幅度对比（元/吨）</div>
-    <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+    <div class="chart-wrap"><div id="barChart" style="width:100%;height:100%"></div></div>
   </div>
 
   <!-- ========== 数据表格 ========== -->
@@ -1047,37 +1033,46 @@ function renderMainChart(prices) {
 
   const labels = prices.map(d => formatDate(d.date));
   const allPrices = [...prices.map(d=>d.p92), ...prices.map(d=>d.p95), ...prices.map(d=>d.p98), ...prices.map(d=>d.pDiesel)];
-  const yMin = Math.floor(Math.min(...allPrices)) - 0.5;
-  const yMax = Math.ceil(Math.max(...allPrices)) + 0.8;
+  const yMin = Math.floor(Math.min(...allPrices)) - 0.8;
+  const yMax = Math.ceil(Math.max(...allPrices)) + 1.2;
 
-  // 找出峰值点和关键事件
+  // 找出关键事件
   const peakIdx = prices.reduce((maxI, d, i, arr) => d.p92 > arr[maxI].p92 ? i : maxI, 0);
   const firstDownIdx = prices.findIndex(d => d.type === 'down');
-  const maxUpIdx = prices.reduce((maxI, d, i, arr) => d.gas > arr[maxI].gas ? i : maxI, 0);
 
   // markLine: 峰值线
   const markLines = [];
   if (peakIdx >= 0) {
     markLines.push({
-      name: '年内峰值',
+      name: '峰值 ¥' + prices[peakIdx].p92.toFixed(2),
       yAxis: prices[peakIdx].p92,
-      lineStyle: { color: '#ef4444', type: 'dashed', width: 1.5 },
-      label: { formatter: '峰值 ¥{c}', position: 'end', color: '#ef4444', fontSize: 11 }
+      lineStyle: { color: '#ef4444', type: 'dashed', width: 1.5, opacity: 0.7 },
+      label: { formatter: '峰值 ¥{c}', position: 'insideEndTop', color: '#ef4444', fontSize: 11 }
     });
   }
 
-  // markPoint: 关键事件
+  // markPoint: 关键事件（分散标注避免重叠）
   const markPoints = [
-    { name: '年初基准', coord: [labels[0], prices[0].p92], symbol: 'diamond', symbolSize: 12, itemStyle: { color: '#3b82f6' }, label: { show: false } }
+    { name: '年初', coord: [labels[0], prices[0].p92], symbol: 'roundRect', symbolSize: [36,20], itemStyle: { color: '#3b82f6' }, label: { show: true, formatter: '年初 ¥{c}', color: '#fff', fontSize: 9 } }
   ];
+
   if (peakIdx > 0) {
-    markPoints.push({ name: '年内峰值', coord: [labels[peakIdx], prices[peakIdx].p92], symbol: 'pin', symbolSize: 40, itemStyle: { color: '#ef4444' }, label: { show: true, formatter: '峰值\n¥{c}', color: '#fff', fontSize: 10 } });
+    markPoints.push({
+      name: '峰值',
+      coord: [labels[peakIdx], prices[peakIdx].p92],
+      symbol: 'pin', symbolSize: 45,
+      itemStyle: { color: '#ef4444' },
+      label: { show: true, formatter: '峰值\n¥{c}', position: 'top', distance: 8, color: '#ef4444', fontSize: 11, fontWeight: 'bold' }
+    });
   }
-  if (firstDownIdx > 0) {
-    markPoints.push({ name: '首次降价', coord: [labels[firstDownIdx], prices[firstDownIdx].p92], symbol: 'pin', symbolSize: 38, itemStyle: { color: '#10b981' }, label: { show: true, formatter: '首降\n¥{c}', color: '#fff', fontSize: 10 } });
-  }
-  if (maxUpIdx > 0 && maxUpIdx !== peakIdx) {
-    markPoints.push({ name: '最大涨幅', coord: [labels[maxUpIdx], prices[maxUpIdx].p92], symbol: 'roundRect', symbolSize: 14, itemStyle: { color: '#f59e0b' }, label: { show: true, formatter: '最大涨幅\n+{c}元/吨', color: '#fff', fontSize: 9, position: 'top' } });
+  if (firstDownIdx > 0 && firstDownIdx !== peakIdx) {
+    markPoints.push({
+      name: '首降',
+      coord: [labels[firstDownIdx], prices[firstDownIdx].p92],
+      symbol: 'pin', symbolSize: 40,
+      itemStyle: { color: '#10b981' },
+      label: { show: true, formatter: '首降\n¥{c}', position: 'bottom', distance: 8, color: '#10b981', fontSize: 11, fontWeight: 'bold' }
+    });
   }
 
   chart.setOption({
@@ -1096,12 +1091,11 @@ function renderMainChart(prices) {
       }
     },
     legend: {
-      bottom: 0,
+      bottom: 0, left: 'center',
       textStyle: { fontSize: 12 },
-      itemWidth: 20, itemHeight: 3,
-      data: ['92# 汽油', '95# 汽油', '98# 汽油', '0# 柴油']
+      itemWidth: 20, itemHeight: 3
     },
-    grid: { left: 55, right: 55, top: 20, bottom: 50 },
+    grid: { left: 55, right: 40, top: 30, bottom: 38 },
     toolbox: {
       right: 10, top: 0,
       feature: {
@@ -1109,7 +1103,7 @@ function renderMainChart(prices) {
       }
     },
     dataZoom: [
-      { type: 'slider', bottom: 28, height: 16, borderColor: 'transparent', backgroundColor: '#f1f5f9', fillerColor: 'rgba(59,130,246,.15)', handleStyle: { color: '#3b82f6' } },
+      { type: 'slider', bottom: 20, height: 14, borderColor: 'transparent', backgroundColor: '#f1f5f9', fillerColor: 'rgba(59,130,246,.12)', handleStyle: { color: '#3b82f6' } },
       { type: 'inside' }
     ],
     xAxis: {
@@ -1129,7 +1123,7 @@ function renderMainChart(prices) {
         smooth: true, symbol: 'circle', symbolSize: 6,
         lineStyle: { color: '#3b82f6', width: 2.5 },
         itemStyle: { color: '#3b82f6' },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(59,130,246,.12)'},{offset:1,color:'rgba(59,130,246,0)'}]) },
+        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(59,130,246,.10)'},{offset:1,color:'rgba(59,130,246,0)'}]) },
         markLine: { symbol: 'none', data: markLines, silent: true },
         markPoint: { data: markPoints, animation: true }
       },
@@ -1138,26 +1132,25 @@ function renderMainChart(prices) {
         smooth: true, symbol: 'circle', symbolSize: 5,
         lineStyle: { color: '#8b5cf6', width: 2 },
         itemStyle: { color: '#8b5cf6' },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(139,92,246,.08)'},{offset:1,color:'rgba(139,92,246,0)'}]) }
+        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(139,92,246,.06)'},{offset:1,color:'rgba(139,92,246,0)'}]) }
       },
       {
         name: '98# 汽油', type: 'line', data: prices.map(d=>d.p98),
         smooth: true, symbol: 'circle', symbolSize: 4,
         lineStyle: { color: '#ef4444', width: 1.5, type: 'dashed' },
         itemStyle: { color: '#ef4444' },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(239,68,68,.06)'},{offset:1,color:'rgba(239,68,68,0)'}]) }
+        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(239,68,68,.04)'},{offset:1,color:'rgba(239,68,68,0)'}]) }
       },
       {
         name: '0# 柴油', type: 'line', data: prices.map(d=>d.pDiesel),
         smooth: true, symbol: 'circle', symbolSize: 5,
         lineStyle: { color: '#374151', width: 2 },
         itemStyle: { color: '#374151' },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(55,65,81,.08)'},{offset:1,color:'rgba(55,65,81,0)'}]) }
+        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(55,65,81,.06)'},{offset:1,color:'rgba(55,65,81,0)'}]) }
       }
     ]
   });
 
-  // 响应式
   window.addEventListener('resize', () => chart.resize());
 }
 
@@ -1168,9 +1161,13 @@ function renderBarChart(prices) {
   const labels = prices.map(d => formatDate(d.date));
 
   // 颜色: 红=上调, 绿=下调, 黄=搁浅
-  const colors = prices.map(d => d.type==='up'?'#ef4444':d.type==='down'?'#10b981':'#f59e0b');
+  const colors = prices.map(d => d.type==='up'?'#ef4444':d.type==='down'?'#10b981':'#94a3b8');
   const gasData = prices.map(d => d.gas);
   const dieselData = prices.map(d => d.diesel);
+
+  // 计算 Y 轴范围，预留标签空间
+  const maxVal = Math.max(...gasData.map(Math.abs), ...dieselData.map(Math.abs));
+  const yExtent = Math.ceil(maxVal / 200) * 200 + 400;
 
   chart.setOption({
     tooltip: {
@@ -1184,7 +1181,7 @@ function renderBarChart(prices) {
         params.forEach(function(p) {
           const v = p.value;
           const sign = v > 0 ? '+' : v < 0 ? '' : '';
-          const clr = v > 0 ? '#ef4444' : v < 0 ? '#10b981' : '#f59e0b';
+          const clr = v > 0 ? '#ef4444' : v < 0 ? '#10b981' : '#94a3b8';
           t += '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + clr + ';margin-right:6px;"></span>';
           t += p.seriesName + ': <b style="color:' + clr + '">' + sign + v + ' 元/吨</b><br/>';
         });
@@ -1192,17 +1189,17 @@ function renderBarChart(prices) {
       }
     },
     legend: {
-      bottom: 0,
+      bottom: 0, left: 'center',
       textStyle: { fontSize: 12 },
       itemWidth: 12, itemHeight: 12
     },
-    grid: { left: 55, right: 20, top: 20, bottom: 50 },
+    grid: { left: 55, right: 20, top: 60, bottom: 38 },
     toolbox: {
-      right: 10, top: 0,
+      right: 10, top: 5,
       feature: { saveAsImage: { title: '保存图片', name: '济南成品油调价幅度', pixelRatio: 2 } }
     },
     dataZoom: [
-      { type: 'slider', bottom: 28, height: 16, borderColor: 'transparent', backgroundColor: '#f1f5f9', fillerColor: 'rgba(59,130,246,.15)', handleStyle: { color: '#3b82f6' } },
+      { type: 'slider', bottom: 20, height: 14, borderColor: 'transparent', backgroundColor: '#f1f5f9', fillerColor: 'rgba(59,130,246,.12)', handleStyle: { color: '#3b82f6' } },
       { type: 'inside' }
     ],
     xAxis: {
@@ -1212,7 +1209,7 @@ function renderBarChart(prices) {
       axisLine: { lineStyle: { color: '#e5e7eb' } }
     },
     yAxis: {
-      type: 'value',
+      type: 'value', min: -yExtent, max: yExtent,
       axisLabel: { formatter: '{value} 元', color: '#6b7280', fontSize: 11 },
       splitLine: { lineStyle: { color: '#f1f5f9' } }
     },
@@ -1221,7 +1218,9 @@ function renderBarChart(prices) {
         name: '汽油', type: 'bar', data: gasData,
         itemStyle: { color: function(p) { return colors[p.dataIndex]; }, borderRadius: [6,6,0,0] },
         barMaxWidth: 28,
-        label: { show: true, position: 'top', fontSize: 10, color: '#6b7280',
+        label: {
+          show: true, position: 'top', fontSize: 10,
+          color: '#374151', distance: 4,
           formatter: function(p) { return p.value !== 0 ? (p.value > 0 ? '+' : '') + p.value : '搁浅'; }
         },
         emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,.15)' } }
@@ -1229,8 +1228,10 @@ function renderBarChart(prices) {
       {
         name: '柴油', type: 'bar', data: dieselData,
         itemStyle: { color: function(p) { return colors[p.dataIndex]; }, borderRadius: [6,6,0,0] },
-        barMaxWidth: 24, barGap: '20%',
-        label: { show: true, position: 'top', fontSize: 10, color: '#9ca3af',
+        barMaxWidth: 22, barGap: '20%',
+        label: {
+          show: true, position: 'top', fontSize: 10,
+          color: '#9ca3af', distance: 4,
           formatter: function(p) { return p.value !== 0 ? (p.value > 0 ? '+' : '') + p.value : '—'; }
         },
         emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,.15)' } }
