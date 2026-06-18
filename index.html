@@ -305,7 +305,33 @@
     @media (max-width: 640px) { .chart-wrap { height: 360px; } }
 
     /* ===== TABLE ===== */
-    .tbl-wrap { overflow-x: auto; }
+    /* ===== RESPONSIVE TABLE ===== */
+    .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    @media (max-width: 768px) {
+      .data-table { font-size: 12px; }
+      .data-table thead th,
+      .data-table tbody td { padding: 8px 6px; white-space: nowrap; }
+    }
+
+    /* ===== SKELETON SHIMMER ===== */
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s ease-in-out infinite;
+      border-radius: 6px;
+      color: transparent !important;
+    }
+    .skeleton-val {
+      display: inline-block; min-width: 60px; height: 28px;
+      background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s ease-in-out infinite;
+      border-radius: 6px;
+    }
     .data-table {
       width: 100%; border-collapse: collapse; font-size: 14px;
     }
@@ -488,26 +514,26 @@
       <div class="section-title" style="margin-bottom:0;" id="currentPriceTitle">📍 油价加载中...</div>
       <span style="font-size:12px;padding:4px 12px;border-radius:999px;font-weight:700;" id="priceTrendBadge">加载中</span>
     </div>
-    <div class="price-grid">
+    <div class="price-grid" id="priceGrid">
       <div class="price-cell reveal" style="transition-delay:0s">
         <div class="p-label">92# 汽油</div>
-        <div class="p-value counter" id="counter92" data-target="0" data-prefix="" data-suffix="">0.00</div>
-        <div class="p-change" id="change92">—</div>
+        <div class="p-value counter skeleton" id="counter92" data-target="0" data-prefix="" data-suffix="">--</div>
+        <div class="p-change skeleton" id="change92">—</div>
       </div>
       <div class="price-cell reveal" style="transition-delay:0.1s">
         <div class="p-label">95# 汽油</div>
-        <div class="p-value counter" id="counter95" data-target="0" data-prefix="" data-suffix="">0.00</div>
-        <div class="p-change" id="change95">—</div>
+        <div class="p-value counter skeleton" id="counter95" data-target="0" data-prefix="" data-suffix="">--</div>
+        <div class="p-change skeleton" id="change95">—</div>
       </div>
       <div class="price-cell reveal" style="transition-delay:0.2s">
         <div class="p-label">98# 汽油</div>
-        <div class="p-value counter" id="counter98" data-target="0" data-prefix="" data-suffix="">0.00</div>
-        <div class="p-change" id="change98">—</div>
+        <div class="p-value counter skeleton" id="counter98" data-target="0" data-prefix="" data-suffix="">--</div>
+        <div class="p-change skeleton" id="change98">—</div>
       </div>
       <div class="price-cell reveal" style="transition-delay:0.3s">
         <div class="p-label">0# 柴油</div>
-        <div class="p-value counter" id="counterDiesel" data-target="0" data-prefix="" data-suffix="">0.00</div>
-        <div class="p-change" id="changeDiesel">—</div>
+        <div class="p-value counter skeleton" id="counterDiesel" data-target="0" data-prefix="" data-suffix="">--</div>
+        <div class="p-change skeleton" id="changeDiesel">—</div>
       </div>
     </div>
   </div>
@@ -851,7 +877,7 @@ async function init() {
       badge.style.background = 'var(--amber-light)';
     }
 
-    // 设置价格 counter 目标值
+    // 设置价格 counter 目标值（移除骨架屏）
     setCounter('counter92', last.p92);
     setCounter('counter95', last.p95);
     setCounter('counter98', last.p98);
@@ -938,7 +964,7 @@ function showDataWarning() {
 }
 function setCounter(id, val) {
   const el = document.getElementById(id);
-  if (el) el.dataset.target = val;
+  if (el) { el.dataset.target = val; el.classList.remove('skeleton'); }
 }
 
 // ============ 辅助：设置变动文本 ============
