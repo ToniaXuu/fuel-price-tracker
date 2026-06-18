@@ -1,0 +1,51 @@
+name: 自动更新成品油价格数据
+
+on:
+  # 每天北京时间 09:00 (UTC 01:00) 自动运行
+  schedule:
+    - cron: "0 1 * * *"
+
+  # 也支持手动触发
+  workflow_dispatch:
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # 允许自动提交
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装依赖
+        run: pip install requests beautifulsoup4
+
+      - name: 运行数据更新脚本
+        run: python scripts/update_prices.py
+
+      - name: 检查是否有数据变更
+        id: check_changes
+        run: |
+          if [[ -n $(git status --porcelain data.json) ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ 检测到 data.json 有更新"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "⏭️ data.json 无变化，跳过提交"
+          fi
+
+      - name: 提交并推送更新
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git commit -m "data: 自动更新成品油价格数据 [skip ci]"
+          git push
