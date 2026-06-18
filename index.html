@@ -465,23 +465,23 @@
     <div class="hero-badge">
       <span class="dot"></span> 数据实时同步 · 国家发展和改革委员会
     </div>
-    <h1>国内成品油价格趋势<br><span class="city">济南站</span> · <span id="currentYear"></span>年度报告</h1>
-    <p>追踪济南地区 92# · 95# · 98# 汽油及 0# 柴油全年调价轨迹，深度解析油价波动对泉城居民生活出行的实际影响。</p>
+    <h1>国内成品油价格趋势<br><span class="city" id="heroCity">济南站</span> · <span id="currentYear"></span>年度报告</h1>
+    <p>追踪<span id="heroCityName">济南</span>地区 92# · 95# · 98# 汽油及 0# 柴油全年调价轨迹，深度解析油价波动对市民生活出行的实际影响。</p>
     <div class="hero-stats">
       <div class="hero-stat">
-        <div class="val" id="hero-rounds">12</div>
+        <div class="val" id="hero-rounds">-</div>
         <div class="lab">调价轮次</div>
       </div>
       <div class="hero-stat">
-        <div class="val" style="color:#f87171" id="hero-ups">9</div>
+        <div class="val" style="color:#f87171" id="hero-ups">-</div>
         <div class="lab">上调</div>
       </div>
       <div class="hero-stat">
-        <div class="val" style="color:#4ade80" id="hero-downs">3</div>
+        <div class="val" style="color:#4ade80" id="hero-downs">-</div>
         <div class="lab">下调</div>
       </div>
       <div class="hero-stat">
-        <div class="val" style="color:#fbbf24">+1.24</div>
+        <div class="val" style="color:#fbbf24" id="hero-cumulative">-</div>
         <div class="lab">92#累计涨（元/升）</div>
       </div>
     </div>
@@ -493,29 +493,29 @@
   <!-- ========== 当前油价 ========== -->
   <div class="reveal">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-      <div class="section-title" style="margin-bottom:0;">📍 济南今日油价 · 6月18日调价后</div>
-      <span style="font-size:12px;color:var(--green);background:var(--green-light);padding:4px 12px;border-radius:999px;font-weight:700;">▼ 年内两连降中</span>
+      <div class="section-title" style="margin-bottom:0;" id="currentPriceTitle">📍 油价加载中...</div>
+      <span style="font-size:12px;padding:4px 12px;border-radius:999px;font-weight:700;" id="priceTrendBadge">加载中</span>
     </div>
     <div class="price-grid">
       <div class="price-cell reveal" style="transition-delay:0s">
         <div class="p-label">92# 汽油</div>
-        <div class="p-value counter" data-target="7.91" data-prefix="" data-suffix="">0.00</div>
-        <div class="p-change down">▼ 较上次 -0.41</div>
+        <div class="p-value counter" id="counter92" data-target="0" data-prefix="" data-suffix="">0.00</div>
+        <div class="p-change" id="change92">—</div>
       </div>
       <div class="price-cell reveal" style="transition-delay:0.1s">
         <div class="p-label">95# 汽油</div>
-        <div class="p-value counter" data-target="8.48" data-prefix="" data-suffix="">0.00</div>
-        <div class="p-change down">▼ 较上次 -0.44</div>
+        <div class="p-value counter" id="counter95" data-target="0" data-prefix="" data-suffix="">0.00</div>
+        <div class="p-change" id="change95">—</div>
       </div>
       <div class="price-cell reveal" style="transition-delay:0.2s">
         <div class="p-label">98# 汽油</div>
-        <div class="p-value counter" data-target="9.96" data-prefix="" data-suffix="">0.00</div>
-        <div class="p-change down">▼ 较上次 -0.41</div>
+        <div class="p-value counter" id="counter98" data-target="0" data-prefix="" data-suffix="">0.00</div>
+        <div class="p-change" id="change98">—</div>
       </div>
       <div class="price-cell reveal" style="transition-delay:0.3s">
         <div class="p-label">0# 柴油</div>
-        <div class="p-value counter" data-target="7.55" data-prefix="" data-suffix="">0.00</div>
-        <div class="p-change down">▼ 较上次 -0.40</div>
+        <div class="p-value counter" id="counterDiesel" data-target="0" data-prefix="" data-suffix="">0.00</div>
+        <div class="p-change" id="changeDiesel">—</div>
       </div>
     </div>
   </div>
@@ -524,23 +524,23 @@
   <div class="quick-stats reveal">
     <div class="qstat up">
       <div class="label">92# 年内峰值</div>
-      <div class="value"><span class="counter" data-target="8.87" data-prefix="¥" data-suffix="">0.00</span></div>
-      <div class="suffix">4月7日 调价后</div>
+      <div class="value"><span class="counter" id="statPeak" data-target="0" data-prefix="¥" data-suffix="">0.00</span></div>
+      <div class="suffix" id="statPeakDate">—</div>
     </div>
     <div class="qstat down">
       <div class="label">92# 年初基准价</div>
-      <div class="value"><span class="counter" data-target="6.67" data-prefix="¥" data-suffix="">0.00</span></div>
-      <div class="suffix">1月6日 搁浅</div>
+      <div class="value"><span class="counter" id="statBase" data-target="0" data-prefix="¥" data-suffix="">0.00</span></div>
+      <div class="suffix" id="statBaseDate">—</div>
     </div>
     <div class="qstat neutral">
       <div class="label">年初至今振幅</div>
-      <div class="value"><span class="counter" data-target="2.20" data-prefix="¥" data-suffix="">0.00</span></div>
-      <div class="suffix">最高 8.87 → 最低 6.67</div>
+      <div class="value"><span class="counter" id="statAmplitude" data-target="0" data-prefix="¥" data-suffix="">0.00</span></div>
+      <div class="suffix" id="statAmplitudeRange">—</div>
     </div>
-    <div class="qstat down">
-      <div class="label">6月两连降累计</div>
-      <div class="value"><span class="counter" data-target="0.83" data-prefix="¥" data-suffix="">0.00</span></div>
-      <div class="suffix">92#；6月4日+6月18日合计</div>
+    <div class="qstat down" id="statRecentCard">
+      <div class="label" id="statRecentLabel">最近变动</div>
+      <div class="value"><span class="counter" id="statRecent" data-target="0" data-prefix="¥" data-suffix="">0.00</span></div>
+      <div class="suffix" id="statRecentDesc">—</div>
     </div>
   </div>
 
@@ -701,12 +701,12 @@
 </footer>
 
 <script>
-// ============ 年份 & 更新日期 ============
-const YEAR = 2026;
-document.getElementById('currentYear').textContent = YEAR;
-document.getElementById('updateDate').textContent = `${YEAR}年6月18日`;
+// ================================================================
+// 国内成品油价格趋势 · 动态数据驱动
+// 数据来源: data.json（由 GitHub Actions 自动更新）
+// ================================================================
 
-// ============ 浮动粒子 ============
+// ============ 浮动粒子（不依赖数据，提前渲染）============
 (function particles() {
   const container = document.getElementById('particles');
   const colors = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899'];
@@ -732,170 +732,356 @@ window.addEventListener('scroll', () => {
   document.getElementById('progressBar').style.width = progress + '%';
 });
 
-// ============ Scroll Reveal ============
+// ============ Scroll Reveal Observer ============
 const revealObserver = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      e.target.classList.add('visible');
-    }
-  });
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
 }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
 
-document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-
 // ============ Counter Animation ============
+function animateCounter(el) {
+  const target = parseFloat(el.dataset.target);
+  if (isNaN(target)) return;
+  const prefix = el.dataset.prefix || '';
+  const suffix = el.dataset.suffix || '';
+  const decimals = String(target).includes('.') ? String(target).split('.')[1].length : 0;
+  const duration = 1800;
+  const start = performance.now();
+
+  function update(ts) {
+    const elapsed = ts - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = target * eased;
+    el.textContent = prefix + current.toFixed(decimals) + suffix;
+    if (progress < 1) requestAnimationFrame(update);
+    else el.textContent = prefix + target.toFixed(decimals) + suffix;
+  }
+  requestAnimationFrame(update);
+}
+
 const counterObserver = new IntersectionObserver((entries) => {
   entries.forEach(e => {
-    if (e.isIntersecting) {
-      const el = e.target;
-      const target = parseFloat(el.dataset.target);
-      const prefix = el.dataset.prefix || '';
-      const suffix = el.dataset.suffix || '';
-      const decimals = String(target).includes('.') ? String(target).split('.')[1].length : 0;
-      const duration = 1800;
-      const start = performance.now();
-
-      function update(ts) {
-        const elapsed = ts - start;
-        const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
-        const current = target * eased;
-        el.textContent = prefix + current.toFixed(decimals) + suffix;
-        if (progress < 1) requestAnimationFrame(update);
-        else el.textContent = prefix + target.toFixed(decimals) + suffix;
-      }
-      requestAnimationFrame(update);
-      counterObserver.unobserve(el);
-    }
+    if (e.isIntersecting) { animateCounter(e.target); counterObserver.unobserve(e.target); }
   });
 }, { threshold: 0.5 });
 
-document.querySelectorAll('.counter').forEach(el => counterObserver.observe(el));
+// ============ 格式化日期（2026-01-06 → "1月6日"）============
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00+08:00');
+  return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+}
 
-// ============ 数据 ============
-// 济南实际价格数据（来源：汽车之家济南油价+山东省发改委+年初基准）
-const jinanData = [
-  { round:1,  date:'1月6日',  type:'flat', gas:0,     perL92:6.67, perL95:7.16, perL98:8.16, diesel:0,     perDiesel:6.26 },
-  { round:2,  date:'1月20日', type:'up',   gas:85,    perL92:6.74, perL95:7.23, perL98:8.23, diesel:85,   perDiesel:6.33 },
-  { round:3,  date:'2月3日',  type:'up',   gas:205,   perL92:6.90, perL95:7.41, perL98:8.41, diesel:105,  perDiesel:6.50 },
-  { round:4,  date:'2月24日', type:'up',   gas:175,   perL92:7.04, perL95:7.56, perL98:8.56, diesel:170,  perDiesel:6.64 },
-  { round:5,  date:'3月9日',  type:'up',   gas:695,   perL92:7.60, perL95:8.15, perL98:9.15, diesel:670,  perDiesel:7.21 },
-  { round:6,  date:'3月23日', type:'up',   gas:1160,  perL92:8.53, perL95:9.15, perL98:10.15,diesel:1115, perDiesel:8.16 },
-  { round:7,  date:'4月7日',  type:'up',   gas:420,   perL92:8.87, perL95:9.51, perL98:10.51,diesel:400,  perDiesel:8.50 },
-  { round:8,  date:'4月21日', type:'down', gas:-555,  perL92:8.42, perL95:9.03, perL98:10.03,diesel:-530, perDiesel:8.05 },
-  { round:9,  date:'5月8日',  type:'up',   gas:320,   perL92:8.68, perL95:9.31, perL98:10.31,diesel:310,  perDiesel:8.32 },
-  { round:10, date:'5月21日', type:'up',   gas:75,    perL92:8.74, perL95:9.37, perL98:10.37,diesel:70,   perDiesel:8.38 },
-  { round:11, date:'6月4日',  type:'down', gas:-525,  perL92:8.32, perL95:8.92, perL98:10.37,diesel:-505, perDiesel:7.95 },
-  { round:12, date:'6月18日', type:'down', gas:-515,  perL92:7.91, perL95:8.48, perL98:9.96, diesel:-495, perDiesel:7.55 },
-];
+// ============ 格式化含符号数字 ============
+function signedNum(v) {
+  if (v === 0) return '—';
+  return (v > 0 ? '+' : '') + v;
+}
 
-// ============ 渲染表格 ============
-const tbody = document.getElementById('tableBody');
-const baseL92 = 6.67;
-jinanData.forEach(d => {
-  const typeMap = { up:'上调', down:'下调', flat:'搁浅' };
-  const gasStr = d.gas !== 0 ? (d.gas > 0 ? '+' : '') + d.gas : '—';
-  const dieselStr = d.diesel !== 0 ? (d.diesel > 0 ? '+' : '') + d.diesel : '—';
-  const cum = +(d.perL92 - baseL92).toFixed(2);
-  const cumStr = cum >= 0 ? '+' + cum.toFixed(2) : cum.toFixed(2);
+// ============ 主初始化：加载 data.json 并驱动全部 UI ============
+async function init() {
+  try {
+    const resp = await fetch('./data.json');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const raw = await resp.json();
 
-  tbody.innerHTML += `<tr>
-    <td style="color:var(--sub);font-size:12px">第${d.round}轮</td>
-    <td><strong>${d.date}</strong></td>
-    <td><span class="badge ${d.type}">${typeMap[d.type]}</span></td>
-    <td style="font-weight:700;color:${d.gas>0?'var(--red)':d.gas<0?'var(--green)':'var(--amber)'}">${gasStr}</td>
-    <td>${d.perL92.toFixed(2)}</td>
-    <td>${d.perL95.toFixed(2)}</td>
-    <td>${d.perL98.toFixed(2)}</td>
-    <td>${d.perDiesel.toFixed(2)}</td>
-    <td style="font-weight:700;color:${cum>0?'var(--red)':cum<0?'var(--green)':'var(--sub)'}">${cumStr}</td>
-  </tr>`;
-});
+    const meta = raw.meta;
+    const prices = raw.prices;
+    const last = prices[prices.length - 1];
+    const baseL92 = meta.basePrice92;
+
+    // ---- 城市名 ----
+    document.getElementById('heroCity').textContent = meta.city + '站';
+    if (document.getElementById('heroCityName')) {
+      document.getElementById('heroCityName').textContent = meta.city;
+    }
+
+    // ---- 年份 & 更新日期 ----
+    document.getElementById('currentYear').textContent = meta.year;
+    document.getElementById('updateDate').textContent =
+      meta.year + '年' + formatDate(meta.lastUpdated);
+
+    // ---- Hero Stats ----
+    const ups = prices.filter(d => d.type === 'up').length;
+    const downs = prices.filter(d => d.type === 'down').length;
+    const cumL92 = +(last.p92 - baseL92).toFixed(2);
+    const cumSign = cumL92 >= 0 ? '+' : '';
+
+    document.getElementById('hero-rounds').textContent = prices.length;
+    document.getElementById('hero-ups').textContent = ups;
+    document.getElementById('hero-downs').textContent = downs;
+    document.getElementById('hero-cumulative').textContent = cumSign + cumL92.toFixed(2);
+
+    // ---- 当前油价 ----
+    const prev = prices.length >= 2 ? prices[prices.length - 2] : null;
+    const diff92 = prev ? +(last.p92 - prev.p92).toFixed(2) : 0;
+    const diff95 = prev ? +(last.p95 - prev.p95).toFixed(2) : 0;
+    const diff98 = prev ? +(last.p98 - prev.p98).toFixed(2) : 0;
+    const diffDiesel = prev ? +(last.pDiesel - prev.pDiesel).toFixed(2) : 0;
+
+    document.getElementById('currentPriceTitle').innerHTML =
+      '📍 ' + meta.city + '今日油价 · ' + formatDate(last.date) + '调价后';
+
+    // 趋势标签
+    const badge = document.getElementById('priceTrendBadge');
+    if (last.type === 'down') {
+      badge.textContent = '▼ 下调 ' + Math.abs(last.gas) + '元/吨';
+      badge.style.color = 'var(--green)';
+      badge.style.background = 'var(--green-light)';
+    } else if (last.type === 'up') {
+      badge.textContent = '▲ 上调 +' + last.gas + '元/吨';
+      badge.style.color = 'var(--red)';
+      badge.style.background = 'var(--red-light)';
+    } else {
+      badge.textContent = '— 搁浅';
+      badge.style.color = '#92400e';
+      badge.style.background = 'var(--amber-light)';
+    }
+
+    // 设置价格 counter 目标值
+    setCounter('counter92', last.p92);
+    setCounter('counter95', last.p95);
+    setCounter('counter98', last.p98);
+    setCounter('counterDiesel', last.pDiesel);
+
+    // 较上次变动
+    setChangeText('change92', diff92);
+    setChangeText('change95', diff95);
+    setChangeText('change98', diff98);
+    setChangeText('changeDiesel', diffDiesel);
+
+    // ---- Quick Stats ----
+    const peak92 = Math.max(...prices.map(d => d.p92));
+    const peakEntry = prices.find(d => d.p92 === peak92);
+    const min92 = Math.min(...prices.map(d => d.p92));
+    const minEntry = prices.find(d => d.p92 === min92);
+    const amplitude = +(peak92 - min92).toFixed(2);
+
+    setCounter('statPeak', peak92);
+    document.getElementById('statPeakDate').textContent = peakEntry
+      ? formatDate(peakEntry.date) + ' 调价后' : '—';
+
+    setCounter('statBase', baseL92);
+    document.getElementById('statBaseDate').textContent = prices[0]
+      ? formatDate(prices[0].date) + (prices[0].type === 'flat' ? ' 搁浅' : '') : '—';
+
+    setCounter('statAmplitude', amplitude);
+    document.getElementById('statAmplitudeRange').textContent =
+      '最高 ' + peak92.toFixed(2) + ' → 最低 ' + min92.toFixed(2);
+
+    // 最近连续变动检测
+    const recentDowns = detectRecentStreak(prices);
+    setCounter('statRecent', recentDowns.sum);
+    document.getElementById('statRecentLabel').textContent = recentDowns.label;
+    document.getElementById('statRecentDesc').textContent = recentDowns.desc;
+    // 动态调整卡片样式
+    const recentCard = document.getElementById('statRecentCard');
+    recentCard.className = 'qstat ' + recentDowns.cssClass;
+
+    // ---- 观察所有 counter ----
+    document.querySelectorAll('.counter').forEach(el => counterObserver.observe(el));
+
+    // ---- 渲染表格 ----
+    renderTable(prices, baseL92);
+
+    // ---- 渲染图表 ----
+    renderMainChart(prices);
+    renderBarChart(prices);
+
+    // ---- 启动 Reveal 观察 ----
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ---- 启动 Timeline reveal（timeline 有自己的 visible 逻辑）----
+    const tlObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.tl-item').forEach(el => tlObserver.observe(el));
+
+  } catch (err) {
+    console.error('数据加载失败:', err);
+    document.getElementById('currentPriceTitle').textContent = '⚠️ 数据加载失败，请刷新重试';
+  }
+}
+
+// ============ 辅助：设置 counter 的 data-target ============
+function setCounter(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.dataset.target = val;
+}
+
+// ============ 辅助：设置变动文本 ============
+function setChangeText(id, diff) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (diff === 0) {
+    el.textContent = '— 持平';
+    el.className = 'p-change';
+  } else if (diff > 0) {
+    el.textContent = '▲ 较上次 +' + diff.toFixed(2);
+    el.className = 'p-change up';
+  } else {
+    el.textContent = '▼ 较上次 ' + diff.toFixed(2);
+    el.className = 'p-change down';
+  }
+}
+
+// ============ 检测最近连续变动 ============
+function detectRecentStreak(prices) {
+  if (prices.length < 2) {
+    return { sum: 0, label: '最近变动', desc: '数据不足', cssClass: 'neutral' };
+  }
+  const last = prices[prices.length - 1];
+  // 从末尾往前找到同类型连续变动
+  let streak = [last];
+  for (let i = prices.length - 2; i >= 0; i--) {
+    if (prices[i].type === last.type) {
+      streak.unshift(prices[i]);
+    } else {
+      break;
+    }
+  }
+  const sum = +streak.reduce((s, d) => s + (d.p92 - (streak[0].p92 || 0)), last.p92 - streak[0].p92).toFixed(2);
+  const absSum = Math.abs(last.p92 - streak[0].p92).toFixed(2);
+
+  if (streak.length >= 2 && last.type === 'down') {
+    return {
+      sum: parseFloat(absSum),
+      label: streak.length + '连降累计',
+      desc: '92#；' + streak.map(d => formatDate(d.date)).join('+') + '合计',
+      cssClass: 'down'
+    };
+  } else if (streak.length >= 2 && last.type === 'up') {
+    return {
+      sum: parseFloat(absSum),
+      label: streak.length + '连涨累计',
+      desc: '92#；' + streak.map(d => formatDate(d.date)).join('+') + '合计',
+      cssClass: 'up'
+    };
+  }
+  // 单次变动
+  const diff = last.p92 - (prices.length >= 2 ? prices[prices.length - 2].p92 : last.p92);
+  const absDiff = Math.abs(diff);
+  return {
+    sum: parseFloat(absDiff.toFixed(2)),
+    label: last.type === 'up' ? '上调' : last.type === 'down' ? '下调' : '变动',
+    desc: '92# ' + formatDate(last.date),
+    cssClass: last.type === 'up' ? 'up' : last.type === 'down' ? 'down' : 'neutral'
+  };
+}
+
+// ============ 渲染数据表格 ============
+function renderTable(prices, baseL92) {
+  const tbody = document.getElementById('tableBody');
+  const typeMap = { up: '上调', down: '下调', flat: '搁浅' };
+  tbody.innerHTML = prices.map(d => {
+    const gasStr = d.gas !== 0 ? signedNum(d.gas) : '—';
+    const dieselStr = d.diesel !== 0 ? signedNum(d.diesel) : '—';
+    const cum = +(d.p92 - baseL92).toFixed(2);
+    const cumStr = cum >= 0 ? '+' + cum.toFixed(2) : cum.toFixed(2);
+    const gasColor = d.gas > 0 ? 'var(--red)' : d.gas < 0 ? 'var(--green)' : 'var(--amber)';
+    const cumColor = cum > 0 ? 'var(--red)' : cum < 0 ? 'var(--green)' : 'var(--sub)';
+    return `<tr>
+      <td style="color:var(--sub);font-size:12px">第${d.round}轮</td>
+      <td><strong>${formatDate(d.date)}</strong></td>
+      <td><span class="badge ${d.type}">${typeMap[d.type]}</span></td>
+      <td style="font-weight:700;color:${gasColor}">${gasStr}</td>
+      <td>${d.p92.toFixed(2)}</td>
+      <td>${d.p95.toFixed(2)}</td>
+      <td>${d.p98.toFixed(2)}</td>
+      <td>${d.pDiesel.toFixed(2)}</td>
+      <td style="font-weight:700;color:${cumColor}">${cumStr}</td>
+    </tr>`;
+  }).join('');
+}
 
 // ============ 主线图 ============
-const labels = jinanData.map(d => d.date);
-const ctx = document.getElementById('mainChart').getContext('2d');
-const grad92  = ctx.createLinearGradient(0,0,0,380); grad92.addColorStop(0,'rgba(59,130,246,.15)');  grad92.addColorStop(1,'rgba(59,130,246,0)');
-const grad95  = ctx.createLinearGradient(0,0,0,380); grad95.addColorStop(0,'rgba(139,92,246,.12)'); grad95.addColorStop(1,'rgba(139,92,246,0)');
-const grad98  = ctx.createLinearGradient(0,0,0,380); grad98.addColorStop(0,'rgba(239,68,68,.1)');   grad98.addColorStop(1,'rgba(239,68,68,0)');
-const gradDie = ctx.createLinearGradient(0,0,0,380); gradDie.addColorStop(0,'rgba(55,65,81,.1)');   gradDie.addColorStop(1,'rgba(55,65,81,0)');
+function renderMainChart(prices) {
+  const labels = prices.map(d => formatDate(d.date));
+  const ctx = document.getElementById('mainChart').getContext('2d');
 
-new Chart(ctx, {
-  type: 'line',
-  data: {
-    labels,
-    datasets: [
-      { label:'92# 汽油', data:jinanData.map(d=>d.perL92), borderColor:'#3b82f6', backgroundColor:grad92, borderWidth:2.5, tension:0.35, pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#3b82f6', fill:true },
-      { label:'95# 汽油', data:jinanData.map(d=>d.perL95), borderColor:'#8b5cf6', backgroundColor:grad95, borderWidth:2,   tension:0.35, pointRadius:3, pointHoverRadius:6, pointBackgroundColor:'#8b5cf6', fill:true },
-      { label:'98# 汽油', data:jinanData.map(d=>d.perL98), borderColor:'#ef4444', backgroundColor:grad98, borderWidth:1.5, tension:0.35, pointRadius:2, pointHoverRadius:5, pointBackgroundColor:'#ef4444', fill:true, borderDash:[6,3] },
-      { label:'0# 柴油', data:jinanData.map(d=>d.perDiesel), borderColor:'#374151', backgroundColor:gradDie, borderWidth:2, tension:0.35, pointRadius:3, pointHoverRadius:6, pointBackgroundColor:'#374151', fill:true },
-    ]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    animation: { duration: 1500, easing: 'easeOutQuart' },
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: 'rgba(15,23,42,.92)',
-        titleFont: { size:13,weight:'700' },
-        bodyFont: { size:12 },
-        padding: 14,
-        cornerRadius: 10,
-        callbacks: {
-          label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} 元/升`
+  // 动态 Y 轴范围
+  const allPrices = [...prices.map(d => d.p92), ...prices.map(d => d.p95), ...prices.map(d => d.p98), ...prices.map(d => d.pDiesel)];
+  const yMin = Math.floor(Math.min(...allPrices)) - 0.5;
+  const yMax = Math.ceil(Math.max(...allPrices)) + 0.8;
+
+  const grad92  = ctx.createLinearGradient(0,0,0,380); grad92.addColorStop(0,'rgba(59,130,246,.15)');  grad92.addColorStop(1,'rgba(59,130,246,0)');
+  const grad95  = ctx.createLinearGradient(0,0,0,380); grad95.addColorStop(0,'rgba(139,92,246,.12)'); grad95.addColorStop(1,'rgba(139,92,246,0)');
+  const grad98  = ctx.createLinearGradient(0,0,0,380); grad98.addColorStop(0,'rgba(239,68,68,.1)');   grad98.addColorStop(1,'rgba(239,68,68,0)');
+  const gradDie = ctx.createLinearGradient(0,0,0,380); gradDie.addColorStop(0,'rgba(55,65,81,.1)');   gradDie.addColorStop(1,'rgba(55,65,81,0)');
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label:'92# 汽油', data:prices.map(d=>d.p92), borderColor:'#3b82f6', backgroundColor:grad92, borderWidth:2.5, tension:0.35, pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#3b82f6', fill:true },
+        { label:'95# 汽油', data:prices.map(d=>d.p95), borderColor:'#8b5cf6', backgroundColor:grad95, borderWidth:2,   tension:0.35, pointRadius:3, pointHoverRadius:6, pointBackgroundColor:'#8b5cf6', fill:true },
+        { label:'98# 汽油', data:prices.map(d=>d.p98), borderColor:'#ef4444', backgroundColor:grad98, borderWidth:1.5, tension:0.35, pointRadius:2, pointHoverRadius:5, pointBackgroundColor:'#ef4444', fill:true, borderDash:[6,3] },
+        { label:'0# 柴油', data:prices.map(d=>d.pDiesel), borderColor:'#374151', backgroundColor:gradDie, borderWidth:2, tension:0.35, pointRadius:3, pointHoverRadius:6, pointBackgroundColor:'#374151', fill:true },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 1500, easing: 'easeOutQuart' },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(15,23,42,.92)',
+          titleFont: { size:13,weight:'700' },
+          bodyFont: { size:12 },
+          padding: 14,
+          cornerRadius: 10,
+          callbacks: {
+            label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + ' 元/升'
+          }
+        }
+      },
+      scales: {
+        x: { grid:{display:false}, ticks:{font:{size:11},maxRotation:45} },
+        y: {
+          min: yMin, max: yMax,
+          ticks: { callback:v=>v.toFixed(2)+'元', font:{size:11} },
+          grid: { color: '#f1f5f9' }
         }
       }
-    },
-    scales: {
-      x: { grid:{display:false}, ticks:{font:{size:11},maxRotation:45} },
-      y: {
-        min: 5.8, max: 11.2,
-        ticks: { callback:v=>v.toFixed(2)+'元', font:{size:11} },
-        grid: { color: '#f1f5f9' }
-      }
     }
-  }
-});
+  });
+}
 
 // ============ 柱状图 ============
-const barColors = jinanData.map(d => d.type==='up'?'#ef4444':d.type==='down'?'#10b981':'#f59e0b');
+function renderBarChart(prices) {
+  const labels = prices.map(d => formatDate(d.date));
+  const barColors = prices.map(d => d.type==='up'?'#ef4444':d.type==='down'?'#10b981':'#f59e0b');
 
-new Chart(document.getElementById('barChart').getContext('2d'), {
-  type: 'bar',
-  data: {
-    labels,
-    datasets: [
-      { label:'汽油 元/吨', data:jinanData.map(d=>d.gas), backgroundColor:barColors, borderRadius:8, barPercentage:.65 },
-      { label:'柴油 元/吨', data:jinanData.map(d=>d.diesel), backgroundColor:barColors.map(c=>c+'99'), borderRadius:8, barPercentage:.65 },
-    ]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    animation: { duration: 1400, easing: 'easeOutQuart' },
-    plugins: {
-      legend: { display: true, position:'top', labels:{usePointStyle:true,pointStyleWidth:8,padding:20,font:{size:12}} },
-      tooltip: {
-        backgroundColor: 'rgba(15,23,42,.92)',
-        callbacks: { label: ctx => `${ctx.dataset.label.split(' ')[0]}: ${ctx.parsed.y>0?'+':''}${ctx.parsed.y} 元/吨` }
-      }
+  new Chart(document.getElementById('barChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'汽油 元/吨', data:prices.map(d=>d.gas), backgroundColor:barColors, borderRadius:8, barPercentage:.65 },
+        { label:'柴油 元/吨', data:prices.map(d=>d.diesel), backgroundColor:barColors.map(c=>c+'99'), borderRadius:8, barPercentage:.65 },
+      ]
     },
-    scales: {
-      x: { grid:{display:false}, ticks:{font:{size:10},maxRotation:45} },
-      y: { ticks:{callback:v=>v+'元',font:{size:11}}, grid:{color:'#f1f5f9'} }
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 1400, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: true, position:'top', labels:{usePointStyle:true,pointStyleWidth:8,padding:20,font:{size:12}} },
+        tooltip: {
+          backgroundColor: 'rgba(15,23,42,.92)',
+          callbacks: { label: ctx => ctx.dataset.label.split(' ')[0] + ': ' + (ctx.parsed.y>0?'+':'') + ctx.parsed.y + ' 元/吨' }
+        }
+      },
+      scales: {
+        x: { grid:{display:false}, ticks:{font:{size:10},maxRotation:45} },
+        y: { ticks:{callback:v=>v+'元',font:{size:11}}, grid:{color:'#f1f5f9'} }
+      }
     }
-  }
-});
+  });
+}
 
-// ============ 内联滚动节流 ============
-let ticking = false;
-window.addEventListener('scroll', () => {
-  if (!ticking) {
-    requestAnimationFrame(() => { ticking = false; });
-    ticking = true;
-  }
-});
+// ============ 启动 ============
+init();
 </script>
 </body>
 </html>
