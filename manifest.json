@@ -1,0 +1,10 @@
+{
+  "name": "成品油价格趋势 · 济南站",
+  "short_name": "油价追踪",
+  "description": "追踪济南地区92#/95#/98#汽油及0#柴油价格调整记录",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f0f2f7",
+  "theme_color": "#3b82f6",
+  "icons": []
+}

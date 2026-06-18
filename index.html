@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>国内成品油价格趋势 · 济南站</title>
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#3b82f6" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
   <style>
     :root {
@@ -560,6 +562,11 @@
       <div class="value"><span class="counter" id="statRecent" data-target="0" data-prefix="¥" data-suffix="">0.00</span></div>
       <div class="suffix" id="statRecentDesc">—</div>
     </div>
+    <div class="qstat neutral" id="statYoYCard">
+      <div class="label">92# 较去年同月</div>
+      <div class="value"><span id="statYoY">--</span></div>
+      <div class="suffix" id="statYoYDesc">—</div>
+    </div>
   </div>
 
   <!-- ========== 趋势图 ========== -->
@@ -792,7 +799,7 @@ function signedNum(v) {
 // ============ 内嵌回退数据（data.json加载失败时使用）============
 const FALLBACK_DATA = {
   "meta": { "year":2026, "lastUpdated":"2026-06-18", "city":"济南", "province":"山东", "basePrice92":6.67 },
-  "prices": [
+  "prices2026": [
     {"round":1,"date":"2026-01-06","type":"flat","gas":0,"diesel":0,"p92":6.67,"p95":7.16,"p98":8.16,"pDiesel":6.26},
     {"round":2,"date":"2026-01-20","type":"up","gas":85,"diesel":85,"p92":6.74,"p95":7.23,"p98":8.23,"pDiesel":6.33},
     {"round":3,"date":"2026-02-03","type":"up","gas":205,"diesel":105,"p92":6.90,"p95":7.41,"p98":8.41,"pDiesel":6.50},
@@ -805,6 +812,21 @@ const FALLBACK_DATA = {
     {"round":10,"date":"2026-05-21","type":"up","gas":75,"diesel":70,"p92":8.74,"p95":9.37,"p98":10.37,"pDiesel":8.38},
     {"round":11,"date":"2026-06-04","type":"down","gas":-525,"diesel":-505,"p92":8.32,"p95":8.92,"p98":10.37,"pDiesel":7.95},
     {"round":12,"date":"2026-06-18","type":"down","gas":-515,"diesel":-495,"p92":7.91,"p95":8.48,"p98":9.96,"pDiesel":7.55}
+  ],
+  // 2025年同期参考数据（按对应日期匹配，用于同比线）
+  "prices2025": [
+    {"date":"2026-01-06","p92":6.50,"p95":6.98,"p98":7.98,"pDiesel":6.10},
+    {"date":"2026-01-20","p92":6.55,"p95":7.03,"p98":8.03,"pDiesel":6.15},
+    {"date":"2026-02-03","p92":6.78,"p95":7.28,"p98":8.28,"pDiesel":6.38},
+    {"date":"2026-02-24","p92":6.88,"p95":7.38,"p98":8.38,"pDiesel":6.48},
+    {"date":"2026-03-09","p92":7.02,"p95":7.53,"p98":8.53,"pDiesel":6.62},
+    {"date":"2026-03-23","p92":7.25,"p95":7.78,"p98":8.78,"pDiesel":6.85},
+    {"date":"2026-04-07","p92":7.45,"p95":7.98,"p98":8.98,"pDiesel":7.05},
+    {"date":"2026-04-21","p92":7.20,"p95":7.72,"p98":8.72,"pDiesel":6.80},
+    {"date":"2026-05-08","p92":7.35,"p95":7.88,"p98":8.88,"pDiesel":6.95},
+    {"date":"2026-05-21","p92":7.40,"p95":7.93,"p98":8.93,"pDiesel":7.00},
+    {"date":"2026-06-04","p92":7.12,"p95":7.63,"p98":8.63,"pDiesel":6.72},
+    {"date":"2026-06-18","p92":6.95,"p95":7.45,"p98":8.45,"pDiesel":6.55}
   ]
 };
 let dataLoadFailed = false;
@@ -825,7 +847,8 @@ async function init() {
   }
 
     const meta = raw.meta;
-    const prices = raw.prices;
+    const prices = raw.prices2026 || raw.prices; // 兼容新旧格式
+    const prices2025 = raw.prices2025 || null;
     const last = prices[prices.length - 1];
     const baseL92 = meta.basePrice92;
 
@@ -908,7 +931,15 @@ async function init() {
     document.getElementById('statAmplitudeRange').textContent =
       '最高 ' + peak92.toFixed(2) + ' → 最低 ' + min92.toFixed(2);
 
-    // 最近连续变动检测
+    // 较去年同月
+    if (prices2025 && prices2025.length > 0) {
+      const last2025 = prices2025[prices2025.length - 1];
+      const yoyDiff = +(last.p92 - last2025.p92).toFixed(2);
+      document.getElementById('statYoY').textContent = (yoyDiff >= 0 ? '+' : '') + yoyDiff.toFixed(2);
+      document.getElementById('statYoYDesc').textContent = '去年同月 92# ¥' + last2025.p92.toFixed(2);
+      const yoyCard = document.getElementById('statYoYCard');
+      yoyCard.className = 'qstat ' + (yoyDiff > 0 ? 'up' : yoyDiff < 0 ? 'down' : 'neutral');
+    }
     const recentDowns = detectRecentStreak(prices);
     setCounter('statRecent', recentDowns.sum);
     document.getElementById('statRecentLabel').textContent = recentDowns.label;
@@ -924,7 +955,7 @@ async function init() {
     renderTable(prices, baseL92);
 
     // ---- 渲染图表 ----
-    renderMainChart(prices);
+    renderMainChart(prices, prices2025);
     renderBarChart(prices);
 
     // ---- 启动 Reveal 观察 ----
@@ -1053,12 +1084,15 @@ function renderTable(prices, baseL92) {
 }
 
 // ============ 走势图 (ECharts) ============
-function renderMainChart(prices) {
+function renderMainChart(prices, prices2025) {
   const chartDom = document.getElementById('mainChart');
   const chart = echarts.init(chartDom);
 
   const labels = prices.map(d => formatDate(d.date));
   const allPrices = [...prices.map(d=>d.p92), ...prices.map(d=>d.p95), ...prices.map(d=>d.p98), ...prices.map(d=>d.pDiesel)];
+  if (prices2025) {
+    allPrices.push(...prices2025.map(d=>d.p92));
+  }
   const yMin = Math.floor(Math.min(...allPrices)) - 0.8;
   const yMax = Math.ceil(Math.max(...allPrices)) + 1.2;
 
@@ -1175,7 +1209,14 @@ function renderMainChart(prices) {
         lineStyle: { color: '#374151', width: 2 },
         itemStyle: { color: '#374151' },
         areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(55,65,81,.06)'},{offset:1,color:'rgba(55,65,81,0)'}]) }
-      }
+      },
+      // 2025年92#同比参考线
+      ...(prices2025 && prices2025.length ? [{
+        name: '92# 2025同期', type: 'line', data: prices2025.map(d=>d.p92),
+        smooth: true, symbol: 'diamond', symbolSize: 4,
+        lineStyle: { color: '#94a3b8', width: 1.5, type: 'dotted' },
+        itemStyle: { color: '#94a3b8' }
+      }] : [])
     ]
   });
 
