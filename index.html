@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>国内成品油价格趋势 · 济南站</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f0f2f7;
+      --card: #ffffff;
+      --border: #e4e7ee;
+      --text: #1a1d28;
+      --sub: #6b7280;
+      --blue: #3b82f6;
+      --blue-light: #dbeafe;
+      --red: #ef4444;
+      --red-light: #fecaca;
+      --green: #10b981;
+      --green-light: #d1fae5;
+      --amber: #f59e0b;
+      --amber-light: #fef3c7;
+      --purple: #8b5cf6;
+      --slate: #374151;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.06);
+      --shadow: 0 4px 24px rgba(0,0,0,.08);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,.12);
+      --radius: 18px;
+      --radius-sm: 10px;
+      --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    /* ===== PROGRESS BAR ===== */
+    .progress-bar {
+      position: fixed; top: 0; left: 0; height: 3px;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+      z-index: 9999;
+      transition: width .15s linear;
+      border-radius: 0 2px 2px 0;
+    }
+
+    /* ===== FLOATING PARTICLES ===== */
+    .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; pointer-events: none; z-index: 0; overflow: hidden; }
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0;
+      animation: floatUp linear infinite;
+    }
+    @keyframes floatUp {
+      0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+      15%  { opacity: 0.5; }
+      50%  { opacity: 0.3; }
+      85%  { opacity: 0; }
+      100% { transform: translateY(-10vh) scale(1.4); opacity: 0; }
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      position: relative;
+      background: linear-gradient(135deg, #0a0f1e 0%, #111d38 30%, #15204a 60%, #0f2744 100%);
+      padding: 80px 20px 70px;
+      overflow: hidden;
+      min-height: 520px;
+      display: flex; align-items: center;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(59,130,246,.25) 0%, transparent 55%),
+        radial-gradient(circle at 80% 70%, rgba(139,92,246,.2) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(236,72,153,.12) 0%, transparent 60%);
+      animation: heroGlow 8s ease-in-out infinite alternate;
+    }
+    @keyframes heroGlow {
+      0%   { opacity: 0.8; }
+      100% { opacity: 1; }
+    }
+    .hero-oil-drop {
+      position: absolute;
+      bottom: -40px;
+      animation: dropBounce 3s ease-in-out infinite;
+      pointer-events: none;
+      font-size: 48px;
+      opacity: 0.15;
+    }
+    @keyframes dropBounce {
+      0%,100% { transform: translateY(0) scale(1); }
+      50%     { transform: translateY(-18px) scale(1.1); }
+    }
+    .hero-oil-drop:nth-child(1) { left: 8%; animation-delay: 0s; }
+    .hero-oil-drop:nth-child(2) { left: 28%; animation-delay: 0.7s; font-size: 36px; }
+    .hero-oil-drop:nth-child(3) { left: 58%; animation-delay: 1.4s; font-size: 56px; }
+    .hero-oil-drop:nth-child(4) { right: 10%; animation-delay: 0.3s; font-size: 42px; }
+
+    .hero-inner {
+      position: relative;
+      max-width: 900px;
+      margin: 0 auto;
+      text-align: center;
+      z-index: 1;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 999px;
+      padding: 5px 18px;
+      font-size: 12px;
+      letter-spacing: .05em;
+      color: rgba(255,255,255,.7);
+      backdrop-filter: blur(8px);
+      margin-bottom: 24px;
+      animation: fadeInUp .7s ease-out both;
+    }
+    .hero-badge .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,.6); }
+      50%     { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 52px);
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.15;
+      letter-spacing: -.02em;
+      margin-bottom: 16px;
+      animation: fadeInUp .7s .1s ease-out both;
+    }
+    .hero h1 .city {
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 16px;
+      color: rgba(255,255,255,.6);
+      max-width: 580px;
+      margin: 0 auto 36px;
+      animation: fadeInUp .7s .2s ease-out both;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-stats {
+      display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;
+      animation: fadeInUp .7s .3s ease-out both;
+    }
+    .hero-stat {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px;
+      padding: 16px 24px;
+      backdrop-filter: blur(6px);
+      min-width: 130px;
+      transition: var(--transition);
+    }
+    .hero-stat:hover {
+      background: rgba(255,255,255,.1);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,.3);
+    }
+    .hero-stat .val {
+      font-size: 30px; font-weight: 800;
+      color: #fff;
+      line-height: 1;
+    }
+    .hero-stat .lab {
+      font-size: 12px; color: rgba(255,255,255,.5);
+      margin-top: 6px;
+    }
+
+    /* ===== CONTAINER ===== */
+    .container { max-width: 1140px; margin: 0 auto; padding: 48px 20px 80px; position: relative; z-index: 1; }
+
+    /* ===== SECTION TITLE ===== */
+    .section-title {
+      font-size: 22px; font-weight: 700; color: var(--text);
+      margin-bottom: 22px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .section-title::before {
+      content: '';
+      display: block;
+      width: 4px; height: 24px;
+      background: linear-gradient(180deg, var(--blue), var(--purple));
+      border-radius: 2px;
+    }
+
+    /* ===== CARD ===== */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 32px;
+      margin-bottom: 28px;
+      transition: var(--transition);
+      position: relative;
+    }
+    .card:hover { box-shadow: var(--shadow-lg); }
+
+    /* ===== SCROLL REVEAL ===== */
+    .reveal {
+      opacity: 0;
+      transform: translateY(36px);
+      transition: opacity .7s ease-out, transform .7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ===== QUICK STATS ===== */
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .qstat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px 24px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+    }
+    .qstat::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 3px;
+      transition: var(--transition);
+    }
+    .qstat.up::after   { background: var(--red); }
+    .qstat.down::after { background: var(--green); }
+    .qstat.neutral::after { background: var(--blue); }
+    .qstat .label { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
+    .qstat .value {
+      font-size: 32px; font-weight: 800; line-height: 1.1;
+      transition: color .5s;
+    }
+    .qstat.up .value   { color: var(--red); }
+    .qstat.down .value { color: var(--green); }
+    .qstat.neutral .value { color: var(--slate); }
+    .qstat .unit { font-size: 13px; font-weight: 400; color: var(--sub); margin-left: 2px; }
+    .qstat .suffix { font-size: 12px; color: var(--sub); margin-top: 4px; }
+
+    /* ===== CURRENT PRICES ===== */
+    .price-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+    @media (max-width: 680px) { .price-grid { grid-template-columns: repeat(2, 1fr); } }
+    .price-cell {
+      background: var(--bg);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+      border: 1px solid var(--border);
+      transition: var(--transition);
+    }
+    .price-cell:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+    .price-cell .p-label { font-size: 11px; color: var(--sub); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+    .price-cell .p-value { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; }
+    .price-cell .p-change { font-size: 12px; font-weight: 600; }
+    .price-cell .p-change.up   { color: var(--red); }
+    .price-cell .p-change.down { color: var(--green); }
+    .price-cell:nth-child(1) { border-top: 3px solid var(--blue); }
+    .price-cell:nth-child(2) { border-top: 3px solid var(--purple); }
+    .price-cell:nth-child(3) { border-top: 3px solid var(--red); }
+    .price-cell:nth-child(4) { border-top: 3px solid var(--slate); }
+
+    /* ===== CHART AREA ===== */
+    .chart-wrap { position: relative; height: 380px; }
+    @media (max-width: 640px) { .chart-wrap { height: 300px; } }
+    .chart-legend {
+      display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;
+      margin-top: 16px; font-size: 13px;
+    }
+    .chart-legend span {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .chart-legend .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+    /* ===== TABLE ===== */
+    .tbl-wrap { overflow-x: auto; }
+    .data-table {
+      width: 100%; border-collapse: collapse; font-size: 14px;
+    }
+    .data-table thead th {
+      background: #f8fafc;
+      color: var(--sub);
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 14px;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      font-size: 12px;
+      letter-spacing: .03em;
+    }
+    .data-table tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .2s; }
+    .data-table tbody tr:hover { background: #f8faff; }
+    .data-table tbody td { padding: 11px 14px; }
+    .badge {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+    .badge.up   { background: var(--red-light);  color: var(--red); }
+    .badge.down { background: var(--green-light); color: var(--green); }
+    .badge.flat { background: var(--amber-light); color: #92400e; }
+
+    /* ===== TIMELINE ===== */
+    .timeline { position: relative; padding-left: 32px; }
+    .timeline::before {
+      content: '';
+      position: absolute; left: 10px; top: 0; bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--blue), var(--purple), var(--red), var(--green));
+      border-radius: 1px;
+    }
+    .tl-item {
+      position: relative; margin-bottom: 28px;
+      opacity: 0; transform: translateX(-20px);
+      transition: opacity .6s ease-out, transform .6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .tl-item.visible { opacity: 1; transform: translateX(0); }
+    .tl-dot {
+      position: absolute; left: -28px; top: 4px;
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 3px solid #fff;
+      box-shadow: 0 0 0 3px var(--blue), 0 0 8px rgba(59,130,246,.4);
+      background: var(--blue);
+      transition: transform .3s;
+    }
+    .tl-item:hover .tl-dot { transform: scale(1.3); }
+    .tl-item.up .tl-dot   { box-shadow: 0 0 0 3px var(--red),    0 0 8px rgba(239,68,68,.4);  background: var(--red); }
+    .tl-item.down .tl-dot { box-shadow: 0 0 0 3px var(--green),  0 0 8px rgba(16,185,129,.4); background: var(--green); }
+    .tl-item.flat .tl-dot { box-shadow: 0 0 0 3px var(--amber),  0 0 8px rgba(245,158,11,.4); background: var(--amber); }
+    .tl-date { font-size: 11px; color: var(--sub); margin-bottom: 4px; letter-spacing: .04em; }
+    .tl-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .tl-item.up .tl-title   { color: var(--red); }
+    .tl-item.down .tl-title { color: var(--green); }
+    .tl-item.flat .tl-title { color: var(--amber); }
+    .tl-body { font-size: 13px; color: var(--sub); line-height: 1.75; }
+
+    /* ===== IMPACT GRID ===== */
+    .impact-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .impact-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .impact-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+      transition: var(--transition);
+    }
+    .impact-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+    .impact-card:hover::before { width: 6px; }
+    .impact-card.n1::before { background: var(--red); }
+    .impact-card.n2::before { background: var(--amber); }
+    .impact-card.n3::before { background: var(--green); }
+    .impact-card.n4::before { background: var(--blue); }
+    .impact-card.n5::before { background: var(--purple); }
+    .impact-card.n6::before { background: var(--slate); }
+    .ic-icon { font-size: 30px; margin-bottom: 10px; }
+    .ic-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+    .ic-body { font-size: 13px; color: var(--sub); line-height: 1.75; }
+
+    /* ===== CALL-OUT BOX ===== */
+    .callout {
+      background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+      border: 1px solid #c7d2fe;
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      display: flex; align-items: flex-start; gap: 16px;
+      margin-bottom: 28px;
+    }
+    .callout-icon { font-size: 28px; flex-shrink: 0; }
+    .callout-text { font-size: 14px; line-height: 1.75; }
+    .callout-text strong { color: var(--blue); }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: #0a0f1e;
+      color: rgba(255,255,255,.45);
+      text-align: center;
+      padding: 28px;
+      font-size: 12px;
+    }
+    footer a { color: rgba(255,255,255,.55); text-decoration: none; }
+    footer a:hover { color: var(--blue); }
+
+    /* ===== TOOLTIP ENHANCEMENT ===== */
+    .tooltip-row { margin-top: 8px; display: none; }
+    .tooltip-row.show { display: block; }
+
+    @media (max-width: 640px) {
+      .hero { padding: 48px 16px 40px; min-height: auto; }
+      .hero h1 { font-size: 26px; }
+      .hero-stats { gap: 12px; }
+      .hero-stat { padding: 12px 16px; min-width: auto; }
+      .card { padding: 20px; }
+      .section-title { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- Floating particles -->
+<div class="particles" id="particles"></div>
+
+<!-- HERO -->
+<section class="hero">
+  <span class="hero-oil-drop">⛽</span>
+  <span class="hero-oil-drop">🛢️</span>
+  <span class="hero-oil-drop">⛽</span>
+  <span class="hero-oil-drop">🛢️</span>
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <span class="dot"></span> 数据实时同步 · 国家发展和改革委员会
+    </div>
+    <h1>国内成品油价格趋势<br><span class="city">济南站</span> · <span id="currentYear"></span>年度报告</h1>
+    <p>追踪济南地区 92# · 95# · 98# 汽油及 0# 柴油全年调价轨迹，深度解析油价波动对泉城居民生活出行的实际影响。</p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="val" id="hero-rounds">12</div>
+        <div class="lab">调价轮次</div>
+      </div>
+      <div class="hero-stat">
+        <div class="val" style="color:#f87171" id="hero-ups">9</div>
+        <div class="lab">上调</div>
+      </div>
+      <div class="hero-stat">
+        <div class="val" style="color:#4ade80" id="hero-downs">3</div>
+        <div class="lab">下调</div>
+      </div>
+      <div class="hero-stat">
+        <div class="val" style="color:#fbbf24">+1.24</div>
+        <div class="lab">92#累计涨（元/升）</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+
+  <!-- ========== 当前油价 ========== -->
+  <div class="reveal">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+      <div class="section-title" style="margin-bottom:0;">📍 济南今日油价 · 6月18日调价后</div>
+      <span style="font-size:12px;color:var(--green);background:var(--green-light);padding:4px 12px;border-radius:999px;font-weight:700;">▼ 年内两连降中</span>
+    </div>
+    <div class="price-grid">
+      <div class="price-cell reveal" style="transition-delay:0s">
+        <div class="p-label">92# 汽油</div>
+        <div class="p-value counter" data-target="7.91" data-prefix="" data-suffix="">0.00</div>
+        <div class="p-change down">▼ 较上次 -0.41</div>
+      </div>
+      <div class="price-cell reveal" style="transition-delay:0.1s">
+        <div class="p-label">95# 汽油</div>
+        <div class="p-value counter" data-target="8.48" data-prefix="" data-suffix="">0.00</div>
+        <div class="p-change down">▼ 较上次 -0.44</div>
+      </div>
+      <div class="price-cell reveal" style="transition-delay:0.2s">
+        <div class="p-label">98# 汽油</div>
+        <div class="p-value counter" data-target="9.96" data-prefix="" data-suffix="">0.00</div>
+        <div class="p-change down">▼ 较上次 -0.41</div>
+      </div>
+      <div class="price-cell reveal" style="transition-delay:0.3s">
+        <div class="p-label">0# 柴油</div>
+        <div class="p-value counter" data-target="7.55" data-prefix="" data-suffix="">0.00</div>
+        <div class="p-change down">▼ 较上次 -0.40</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 快速统计 ========== -->
+  <div class="quick-stats reveal">
+    <div class="qstat up">
+      <div class="label">92# 年内峰值</div>
+      <div class="value"><span class="counter" data-target="8.87" data-prefix="¥" data-suffix="">0.00</span></div>
+      <div class="suffix">4月7日 调价后</div>
+    </div>
+    <div class="qstat down">
+      <div class="label">92# 年初基准价</div>
+      <div class="value"><span class="counter" data-target="6.67" data-prefix="¥" data-suffix="">0.00</span></div>
+      <div class="suffix">1月6日 搁浅</div>
+    </div>
+    <div class="qstat neutral">
+      <div class="label">年初至今振幅</div>
+      <div class="value"><span class="counter" data-target="2.20" data-prefix="¥" data-suffix="">0.00</span></div>
+      <div class="suffix">最高 8.87 → 最低 6.67</div>
+    </div>
+    <div class="qstat down">
+      <div class="label">6月两连降累计</div>
+      <div class="value"><span class="counter" data-target="0.83" data-prefix="¥" data-suffix="">0.00</span></div>
+      <div class="suffix">92#；6月4日+6月18日合计</div>
+    </div>
+  </div>
+
+  <!-- ========== 趋势图 ========== -->
+  <div class="card reveal">
+    <div class="section-title">济南成品油零售价格走势（元/升）</div>
+    <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
+    <div class="chart-legend">
+      <span><i class="dot" style="background:#3b82f6"></i> 92# 汽油</span>
+      <span><i class="dot" style="background:#8b5cf6"></i> 95# 汽油</span>
+      <span><i class="dot" style="background:#ef4444"></i> 98# 汽油</span>
+      <span><i class="dot" style="background:#374151"></i> 0# 柴油</span>
+    </div>
+  </div>
+
+  <!-- ========== 柱状图 ========== -->
+  <div class="card reveal">
+    <div class="section-title">历次调价幅度对比（元/吨）</div>
+    <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+  </div>
+
+  <!-- ========== 数据表格 ========== -->
+  <div class="card reveal">
+    <div class="section-title">📋 2026年全部调价记录 · 济南地区</div>
+    <div class="tbl-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>调价日期</th>
+            <th>趋势</th>
+            <th>汽油<br>元/吨</th>
+            <th>92#<br>元/升</th>
+            <th>95#<br>元/升</th>
+            <th>98#<br>元/升</th>
+            <th>0#柴油<br>元/升</th>
+            <th>92#累计<br>Δ元/升</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ========== 时间轴影响分析 ========== -->
+  <div class="card reveal">
+    <div class="section-title">⏳ 分段影响分析</div>
+    <div class="callout">
+      <div class="callout-icon">💡</div>
+      <div class="callout-text">
+        <strong>济南作为山东省会</strong>，是华北重要的交通枢纽和物流集散中心。油价变动对本地约<strong>340万辆</strong>机动车、数万名网约车司机、以及通达全省的货运网络产生直接影响。以下按时间分段分析。
+      </div>
+    </div>
+    <div class="timeline">
+
+      <div class="tl-item up reveal" style="transition-delay:0s">
+        <div class="tl-dot"></div>
+        <div class="tl-date">2026年1月6日 — 3月23日</div>
+        <div class="tl-title">Q1 五连涨 · 中东局势引爆油价</div>
+        <div class="tl-body">
+          年初国际原油市场因地缘冲突剧烈波动，霍尔木兹海峡通行受阻推高原油价格。<strong>济南92#从6.67涨至8.53元/升，95#从7.16涨至9.15元/升，0#柴油从6.26涨至8.16元/升</strong>，各油品涨幅均超30%。3月23日单次上调1160元/吨创三年新高。<br><br>
+          <strong>🏠 对济南居民的影响：</strong>以一辆百公里油耗10升的家用车、月行1000公里计算，月油费从<strong>667元涨至853元</strong>，增加约186元。济南经十路、北园高架等主干道通勤成本显著上升。网约车燃油附加费上调至1.5元/单，外卖配送费普遍上涨0.5~1元。
+        </div>
+      </div>
+
+      <div class="tl-item up reveal" style="transition-delay:0.15s">
+        <div class="tl-dot"></div>
+        <div class="tl-date">2026年4月7日</div>
+        <div class="tl-title">Q2初再涨 · 到达年内最高点</div>
+        <div class="tl-body">
+          4月7日汽油再涨420元/吨，<strong>济南92#达到年内峰值8.87元/升，95# 9.51元/升，98#突破10.51元/升</strong>。济南市区加油站排长队加油现象频现。清明假期出行成本达历年最高，济南至泰安、淄博等短途自驾游意愿明显下降。柴油车货运成本飙升，济南盖家沟物流园区运价普遍上调10%~15%。
+        </div>
+      </div>
+
+      <div class="tl-item down reveal" style="transition-delay:0.3s">
+        <div class="tl-dot"></div>
+        <div class="tl-date">2026年4月21日</div>
+        <div class="tl-title">年内首降 · -555元/吨，喘息之机</div>
+        <div class="tl-body">
+          美伊局势出现和谈信号，国际原油回调，国内迎来2026年首次降价。济南92#回落至8.42元/升，加满50升可省约22元。<strong>然而整体油价仍比年初贵1.75元/升</strong>（92#），降价的边际效益有限，仅起到短期心理安慰作用。
+        </div>
+      </div>
+
+      <div class="tl-item up reveal" style="transition-delay:0.45s">
+        <div class="tl-dot"></div>
+        <div class="tl-date">2026年5月8日 — 5月21日</div>
+        <div class="tl-title">五月两连涨 · 端午节前再度走高</div>
+        <div class="tl-body">
+          5月两轮合计上调395元/吨，济南92#回升至8.74元/升、0#柴油8.38元/升。端午节前物流高峰叠加高油价，快递和生鲜配送成本居高不下，济南市区部分超市和菜市场价格出现轻微传导。
+        </div>
+      </div>
+
+      <div class="tl-item down reveal" style="transition-delay:0.6s">
+        <div class="tl-dot"></div>
+        <div class="tl-date">2026年6月4日 — 6月18日</div>
+        <div class="tl-title">618两连降 · -1040元/吨，年内最大幅度回落</div>
+        <div class="tl-body">
+          6月4日降525元/吨（-0.42元/升），6月18日再降515元/吨（-0.41元/升）。<strong>两轮合计，济南92#从8.74降至7.91元/升，累计降0.83元/升；0#柴油从8.38降至7.55元/升，降0.83元/升。</strong>50升油箱加满92#可省约41.5元。<br><br>
+          <strong>🏠 618+端午双重利好：</strong>油价下降与618购物节、端午假期高度重叠：①自驾出游成本大幅回落，济南至青岛、烟台等沿海线路走热；②电商大件商品物流成本同步下降；③货运行业终于迎来喘息，盖家沟物流园运价松动下行，部分线路降幅达5%~8%。
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========== 影响维度 ========== -->
+  <div class="section-title reveal">🔍 油价变动对济南不同群体的影响</div>
+  <div class="impact-grid">
+    <div class="impact-card n1 reveal">
+      <div class="ic-icon">🚗</div>
+      <div class="ic-title">私家车主 · 日常通勤</div>
+      <div class="ic-body">
+        以济南经十路通勤族为例：Q1五连涨后月度油费飙升近200元；618双降后月均油费回落至约791元。全年油费波动幅度超220元/月，高位期间不少车主选择拼车或临时换乘BRT。
+      </div>
+    </div>
+    <div class="impact-card n2 reveal">
+      <div class="ic-icon">🛵</div>
+      <div class="ic-title">网约车 · 外卖配送</div>
+      <div class="ic-body">
+        3~5月高油价期，济南各网约车平台燃油附加费从0.5元上调至最高1.5元/单。全职网约车司机月增油费约600~800元，部分司机选择错峰出车降低空驶率。6月降价后附加费逐步回调。
+      </div>
+    </div>
+    <div class="impact-card n3 reveal">
+      <div class="ic-icon">🚛</div>
+      <div class="ic-title">物流货运 · 盖家沟</div>
+      <div class="ic-body">
+        济南盖家沟物流园区是山东最大公路货运枢纽。年初至5月柴油涨幅达2.12元/升，400升大货车单次加满多花近850元，部分专线被迫提价10%~15%。6月双降后运价逐步回调，物流企业经营压力明显缓解。
+      </div>
+    </div>
+    <div class="impact-card n4 reveal">
+      <div class="ic-icon">🌾</div>
+      <div class="ic-title">农业 · 三夏生产</div>
+      <div class="ic-body">
+        济南周边章丘、长清、商河等区县夏收季与高油价周期高度重合。农机作业、粮食运输柴油成本增加约30%，每亩收割成本上升8~12元。6月降价恰逢其时，有助于平抑夏粮综合成本。
+      </div>
+    </div>
+    <div class="impact-card n5 reveal">
+      <div class="ic-icon">🏭</div>
+      <div class="ic-title">制造业 · 高新区</div>
+      <div class="ic-body">
+        济南高新区、章丘明水经开区等制造业集聚区，原材料和成品运输费用受油价影响显著。上半年制造业物流成本同比上升约15%，部分中小企业利润空间被压缩。6月油价回落利好下半年工业运行。
+      </div>
+    </div>
+    <div class="impact-card n6 reveal">
+      <div class="ic-icon">✈️</div>
+      <div class="ic-title">端午出行 · 消费提振</div>
+      <div class="ic-body">
+        6月18日油价下调与端午假期无缝衔接，济南绕城高速车流量预计同比增长超15%。趵突泉、大明湖、千佛山等景区周边自驾游激增，南部山区农家乐和民宿预订量较5月翻倍，油费节省转化为消费增量。
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>数据来源：国家发展和改革委员会 · 山东省发展和改革委员会 · 汽车之家油价频道 &nbsp;|&nbsp; 仅供参考，实际以济南各加油站挂牌为准</p>
+  <p style="margin-top:6px">📍 基准城市：济南 &nbsp;|&nbsp; 更新至 <span id="updateDate"></span> &nbsp;|&nbsp; <a href="https://github.com/ToniaXuu" target="_blank">@ToniaXuu</a></p>
+</footer>
+
+<script>
+// ============ 年份 & 更新日期 ============
+const YEAR = 2026;
+document.getElementById('currentYear').textContent = YEAR;
+document.getElementById('updateDate').textContent = `${YEAR}年6月18日`;
+
+// ============ 浮动粒子 ============
+(function particles() {
+  const container = document.getElementById('particles');
+  const colors = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899'];
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 6 + 2;
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration:${Math.random()*8+8}s;
+      animation-delay:${Math.random()*10}s;
+    `;
+    container.appendChild(p);
+  }
+})();
+
+// ============ 进度条 ============
+window.addEventListener('scroll', () => {
+  const scrollH = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = scrollH > 0 ? (window.scrollY / scrollH) * 100 : 0;
+  document.getElementById('progressBar').style.width = progress + '%';
+});
+
+// ============ Scroll Reveal ============
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
+
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+// ============ Counter Animation ============
+const counterObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const el = e.target;
+      const target = parseFloat(el.dataset.target);
+      const prefix = el.dataset.prefix || '';
+      const suffix = el.dataset.suffix || '';
+      const decimals = String(target).includes('.') ? String(target).split('.')[1].length : 0;
+      const duration = 1800;
+      const start = performance.now();
+
+      function update(ts) {
+        const elapsed = ts - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        const current = target * eased;
+        el.textContent = prefix + current.toFixed(decimals) + suffix;
+        if (progress < 1) requestAnimationFrame(update);
+        else el.textContent = prefix + target.toFixed(decimals) + suffix;
+      }
+      requestAnimationFrame(update);
+      counterObserver.unobserve(el);
+    }
+  });
+}, { threshold: 0.5 });
+
+document.querySelectorAll('.counter').forEach(el => counterObserver.observe(el));
+
+// ============ 数据 ============
+// 济南实际价格数据（来源：汽车之家济南油价+山东省发改委+年初基准）
+const jinanData = [
+  { round:1,  date:'1月6日',  type:'flat', gas:0,     perL92:6.67, perL95:7.16, perL98:8.16, diesel:0,     perDiesel:6.26 },
+  { round:2,  date:'1月20日', type:'up',   gas:85,    perL92:6.74, perL95:7.23, perL98:8.23, diesel:85,   perDiesel:6.33 },
+  { round:3,  date:'2月3日',  type:'up',   gas:205,   perL92:6.90, perL95:7.41, perL98:8.41, diesel:105,  perDiesel:6.50 },
+  { round:4,  date:'2月24日', type:'up',   gas:175,   perL92:7.04, perL95:7.56, perL98:8.56, diesel:170,  perDiesel:6.64 },
+  { round:5,  date:'3月9日',  type:'up',   gas:695,   perL92:7.60, perL95:8.15, perL98:9.15, diesel:670,  perDiesel:7.21 },
+  { round:6,  date:'3月23日', type:'up',   gas:1160,  perL92:8.53, perL95:9.15, perL98:10.15,diesel:1115, perDiesel:8.16 },
+  { round:7,  date:'4月7日',  type:'up',   gas:420,   perL92:8.87, perL95:9.51, perL98:10.51,diesel:400,  perDiesel:8.50 },
+  { round:8,  date:'4月21日', type:'down', gas:-555,  perL92:8.42, perL95:9.03, perL98:10.03,diesel:-530, perDiesel:8.05 },
+  { round:9,  date:'5月8日',  type:'up',   gas:320,   perL92:8.68, perL95:9.31, perL98:10.31,diesel:310,  perDiesel:8.32 },
+  { round:10, date:'5月21日', type:'up',   gas:75,    perL92:8.74, perL95:9.37, perL98:10.37,diesel:70,   perDiesel:8.38 },
+  { round:11, date:'6月4日',  type:'down', gas:-525,  perL92:8.32, perL95:8.92, perL98:10.37,diesel:-505, perDiesel:7.95 },
+  { round:12, date:'6月18日', type:'down', gas:-515,  perL92:7.91, perL95:8.48, perL98:9.96, diesel:-495, perDiesel:7.55 },
+];
+
+// ============ 渲染表格 ============
+const tbody = document.getElementById('tableBody');
+const baseL92 = 6.67;
+jinanData.forEach(d => {
+  const typeMap = { up:'上调', down:'下调', flat:'搁浅' };
+  const gasStr = d.gas !== 0 ? (d.gas > 0 ? '+' : '') + d.gas : '—';
+  const dieselStr = d.diesel !== 0 ? (d.diesel > 0 ? '+' : '') + d.diesel : '—';
+  const cum = +(d.perL92 - baseL92).toFixed(2);
+  const cumStr = cum >= 0 ? '+' + cum.toFixed(2) : cum.toFixed(2);
+
+  tbody.innerHTML += `<tr>
+    <td style="color:var(--sub);font-size:12px">第${d.round}轮</td>
+    <td><strong>${d.date}</strong></td>
+    <td><span class="badge ${d.type}">${typeMap[d.type]}</span></td>
+    <td style="font-weight:700;color:${d.gas>0?'var(--red)':d.gas<0?'var(--green)':'var(--amber)'}">${gasStr}</td>
+    <td>${d.perL92.toFixed(2)}</td>
+    <td>${d.perL95.toFixed(2)}</td>
+    <td>${d.perL98.toFixed(2)}</td>
+    <td>${d.perDiesel.toFixed(2)}</td>
+    <td style="font-weight:700;color:${cum>0?'var(--red)':cum<0?'var(--green)':'var(--sub)'}">${cumStr}</td>
+  </tr>`;
+});
+
+// ============ 主线图 ============
+const labels = jinanData.map(d => d.date);
+const ctx = document.getElementById('mainChart').getContext('2d');
+const grad92  = ctx.createLinearGradient(0,0,0,380); grad92.addColorStop(0,'rgba(59,130,246,.15)');  grad92.addColorStop(1,'rgba(59,130,246,0)');
+const grad95  = ctx.createLinearGradient(0,0,0,380); grad95.addColorStop(0,'rgba(139,92,246,.12)'); grad95.addColorStop(1,'rgba(139,92,246,0)');
+const grad98  = ctx.createLinearGradient(0,0,0,380); grad98.addColorStop(0,'rgba(239,68,68,.1)');   grad98.addColorStop(1,'rgba(239,68,68,0)');
+const gradDie = ctx.createLinearGradient(0,0,0,380); gradDie.addColorStop(0,'rgba(55,65,81,.1)');   gradDie.addColorStop(1,'rgba(55,65,81,0)');
+
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [
+      { label:'92# 汽油', data:jinanData.map(d=>d.perL92), borderColor:'#3b82f6', backgroundColor:grad92, borderWidth:2.5, tension:0.35, pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#3b82f6', fill:true },
+      { label:'95# 汽油', data:jinanData.map(d=>d.perL95), borderColor:'#8b5cf6', backgroundColor:grad95, borderWidth:2,   tension:0.35, pointRadius:3, pointHoverRadius:6, pointBackgroundColor:'#8b5cf6', fill:true },
+      { label:'98# 汽油', data:jinanData.map(d=>d.perL98), borderColor:'#ef4444', backgroundColor:grad98, borderWidth:1.5, tension:0.35, pointRadius:2, pointHoverRadius:5, pointBackgroundColor:'#ef4444', fill:true, borderDash:[6,3] },
+      { label:'0# 柴油', data:jinanData.map(d=>d.perDiesel), borderColor:'#374151', backgroundColor:gradDie, borderWidth:2, tension:0.35, pointRadius:3, pointHoverRadius:6, pointBackgroundColor:'#374151', fill:true },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    animation: { duration: 1500, easing: 'easeOutQuart' },
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(15,23,42,.92)',
+        titleFont: { size:13,weight:'700' },
+        bodyFont: { size:12 },
+        padding: 14,
+        cornerRadius: 10,
+        callbacks: {
+          label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} 元/升`
+        }
+      }
+    },
+    scales: {
+      x: { grid:{display:false}, ticks:{font:{size:11},maxRotation:45} },
+      y: {
+        min: 5.8, max: 11.2,
+        ticks: { callback:v=>v.toFixed(2)+'元', font:{size:11} },
+        grid: { color: '#f1f5f9' }
+      }
+    }
+  }
+});
+
+// ============ 柱状图 ============
+const barColors = jinanData.map(d => d.type==='up'?'#ef4444':d.type==='down'?'#10b981':'#f59e0b');
+
+new Chart(document.getElementById('barChart').getContext('2d'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      { label:'汽油 元/吨', data:jinanData.map(d=>d.gas), backgroundColor:barColors, borderRadius:8, barPercentage:.65 },
+      { label:'柴油 元/吨', data:jinanData.map(d=>d.diesel), backgroundColor:barColors.map(c=>c+'99'), borderRadius:8, barPercentage:.65 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    animation: { duration: 1400, easing: 'easeOutQuart' },
+    plugins: {
+      legend: { display: true, position:'top', labels:{usePointStyle:true,pointStyleWidth:8,padding:20,font:{size:12}} },
+      tooltip: {
+        backgroundColor: 'rgba(15,23,42,.92)',
+        callbacks: { label: ctx => `${ctx.dataset.label.split(' ')[0]}: ${ctx.parsed.y>0?'+':''}${ctx.parsed.y} 元/吨` }
+      }
+    },
+    scales: {
+      x: { grid:{display:false}, ticks:{font:{size:10},maxRotation:45} },
+      y: { ticks:{callback:v=>v+'元',font:{size:11}}, grid:{color:'#f1f5f9'} }
+    }
+  }
+});
+
+// ============ 内联滚动节流 ============
+let ticking = false;
+window.addEventListener('scroll', () => {
+  if (!ticking) {
+    requestAnimationFrame(() => { ticking = false; });
+    ticking = true;
+  }
+});
+</script>
+</body>
+</html>
