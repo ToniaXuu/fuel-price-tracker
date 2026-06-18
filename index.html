@@ -1051,15 +1051,16 @@ function renderMainChart(prices) {
     });
   }
 
-  // markPoint: 关键事件（分散标注避免重叠）
+  // markPoint: 关键事件（需要显式 value，否则 {c} 为 undefined）
   const markPoints = [
-    { name: '年初', coord: [labels[0], prices[0].p92], symbol: 'roundRect', symbolSize: [36,20], itemStyle: { color: '#3b82f6' }, label: { show: true, formatter: '年初 ¥{c}', color: '#fff', fontSize: 9 } }
+    { name: '年初', coord: [labels[0], prices[0].p92], value: prices[0].p92.toFixed(2), symbol: 'roundRect', symbolSize: [36,20], itemStyle: { color: '#3b82f6' }, label: { show: true, formatter: '年初 ¥{c}', color: '#fff', fontSize: 9 } }
   ];
 
   if (peakIdx > 0) {
     markPoints.push({
       name: '峰值',
       coord: [labels[peakIdx], prices[peakIdx].p92],
+      value: prices[peakIdx].p92.toFixed(2),
       symbol: 'pin', symbolSize: 45,
       itemStyle: { color: '#ef4444' },
       label: { show: true, formatter: '峰值\n¥{c}', position: 'top', distance: 8, color: '#ef4444', fontSize: 11, fontWeight: 'bold' }
@@ -1069,6 +1070,7 @@ function renderMainChart(prices) {
     markPoints.push({
       name: '首降',
       coord: [labels[firstDownIdx], prices[firstDownIdx].p92],
+      value: prices[firstDownIdx].p92.toFixed(2),
       symbol: 'pin', symbolSize: 40,
       itemStyle: { color: '#10b981' },
       label: { show: true, formatter: '首降\n¥{c}', position: 'bottom', distance: 8, color: '#10b981', fontSize: 11, fontWeight: 'bold' }
