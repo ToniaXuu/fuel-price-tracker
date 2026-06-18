@@ -50,9 +50,8 @@ jobs:
           git commit -m "data: 自动更新成品油价格数据 [skip ci]"
           git push
 
-      - name: 发送通知（微信+钉钉）
-        if: steps.check_changes.outputs.changed == 'true'
+      - name: 发送每日通知（微信+钉钉）
         env:
           SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
           DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
-        run: python scripts/send_notification.py
+        run: python scripts/send_notification.py "${{ steps.check_changes.outputs.changed }}"
