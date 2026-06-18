@@ -54,4 +54,5 @@ jobs:
         env:
           SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
           DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+          DINGTALK_SECRET: ${{ secrets.DINGTALK_SECRET }}
         run: python scripts/send_notification.py "${{ steps.check_changes.outputs.changed }}"
