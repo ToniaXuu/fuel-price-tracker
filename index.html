@@ -103,21 +103,19 @@
       100% { opacity: 1; }
     }
     .hero-oil-drop {
-      position: absolute;
-      bottom: -40px;
+      position: absolute; bottom: -28px; border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg); opacity: 0.15; pointer-events: none;
       animation: dropBounce 3s ease-in-out infinite;
-      pointer-events: none;
-      font-size: 48px;
-      opacity: 0.15;
-    }
-    @keyframes dropBounce {
-      0%,100% { transform: translateY(0) scale(1); }
-      50%     { transform: translateY(-18px) scale(1.1); }
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
     }
     .hero-oil-drop:nth-child(1) { left: 8%; animation-delay: 0s; }
-    .hero-oil-drop:nth-child(2) { left: 28%; animation-delay: 0.7s; font-size: 36px; }
-    .hero-oil-drop:nth-child(3) { left: 58%; animation-delay: 1.4s; font-size: 56px; }
-    .hero-oil-drop:nth-child(4) { right: 10%; animation-delay: 0.3s; font-size: 42px; }
+    .hero-oil-drop:nth-child(2) { left: 28%; animation-delay: 0.7s; }
+    .hero-oil-drop:nth-child(3) { left: 58%; animation-delay: 1.4s; }
+    .hero-oil-drop:nth-child(4) { right: 10%; animation-delay: 0.3s; }
+    @keyframes dropBounce {
+      0%,100% { transform: rotate(-45deg) translateY(0) scale(1); }
+      50%     { transform: rotate(-45deg) translateY(-18px) scale(1.1); }
+    }
 
     .hero-inner {
       position: relative;
@@ -480,6 +478,46 @@
       .card { padding: 20px; }
       .section-title { font-size: 18px; }
     }
+
+    /* ===== BACK TO TOP ===== */
+    .back-top {
+      position: fixed; bottom: 28px; right: 28px; z-index: 999;
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--blue); color: #fff; border: none; cursor: pointer;
+      font-size: 20px; line-height: 44px; text-align: center;
+      box-shadow: 0 4px 16px rgba(59,130,246,.35);
+      opacity: 0; transform: translateY(20px);
+      transition: opacity .35s, transform .35s, background .2s;
+      pointer-events: none;
+    }
+    .back-top.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .back-top:hover { background: #2563eb; }
+
+    /* ===== REDUCED MOTION ===== */
+    @media (prefers-reduced-motion: reduce) {
+      .particle { display: none !important; }
+      .reveal, .tl-item { opacity: 1 !important; transform: none !important; }
+      .skeleton { animation: none !important; background: #e5e7eb !important; }
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+      html { scroll-behavior: auto; }
+    }
+
+    /* ===== DARK MODE ===== */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a; --card: #1e293b; --border: #334155;
+        --text: #e2e8f0; --sub: #94a3b8;
+        --blue-light: #1e3a5f; --red-light: #3b1a1a; --green-light: #143d2a; --amber-light: #3d2e14;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,.25);
+        --shadow: 0 4px 24px rgba(0,0,0,.35);
+        --shadow-lg: 0 12px 40px rgba(0,0,0,.45);
+      }
+      body { background: var(--bg); }
+      .data-table thead th { background: #1a2332; }
+      .data-table tbody tr:hover { background: #1e293b; }
+      .callout { background: linear-gradient(135deg, #1a2332, #1e293b); border-color: #334155; }
+      .tl-item .tl-dot { border-color: #0f172a; }
+    }
   </style>
 </head>
 <body>
@@ -491,10 +529,10 @@
 
 <!-- HERO -->
 <section class="hero">
-  <span class="hero-oil-drop">⛽</span>
-  <span class="hero-oil-drop">🛢️</span>
-  <span class="hero-oil-drop">⛽</span>
-  <span class="hero-oil-drop">🛢️</span>
+  <span class="hero-oil-drop" style="left:8%;width:38px;height:38px;animation-delay:0s"></span>
+  <span class="hero-oil-drop" style="left:28%;width:28px;height:28px;animation-delay:0.7s"></span>
+  <span class="hero-oil-drop" style="left:58%;width:44px;height:44px;animation-delay:1.4s"></span>
+  <span class="hero-oil-drop" style="right:10%;width:34px;height:34px;animation-delay:0.3s"></span>
   <div class="hero-inner">
     <div class="hero-badge">
       <span class="dot"></span> 数据实时同步 · 国家发展和改革委员会
@@ -516,7 +554,7 @@
       </div>
       <div class="hero-stat">
         <div class="val" style="color:#fbbf24" id="hero-cumulative">-</div>
-        <div class="lab">92#累计涨（元/升）</div>
+        <div class="lab">95#累计涨跌（元/升）</div>
       </div>
     </div>
   </div>
@@ -728,6 +766,8 @@
 
 </div>
 
+<button class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="回到顶部">↑</button>
+
 <footer>
   <p>数据来源：国家发展和改革委员会 · 山东省发展和改革委员会 · 汽车之家油价频道 &nbsp;|&nbsp; 仅供参考，实际以济南各加油站挂牌为准</p>
   <p style="margin-top:6px">📍 基准城市：济南 &nbsp;|&nbsp; 更新至 <span id="updateDate"></span> &nbsp;|&nbsp; <a href="https://github.com/ToniaXuu" target="_blank">@ToniaXuu</a></p>
@@ -761,7 +801,9 @@
 // ============ 进度条 ============
 window.addEventListener('scroll', () => {
   const scrollH = document.documentElement.scrollHeight - window.innerHeight;
-  document.getElementById('progressBar').style.width = scrollH > 0 ? (window.scrollY / scrollH) * 100 + '%' : '0%';
+  const st = window.scrollY;
+  document.getElementById('progressBar').style.width = scrollH > 0 ? (st / scrollH) * 100 + '%' : '0%';
+  document.getElementById('backTop').classList.toggle('visible', st > 600);
 }, { passive: true });
 
 // ============ Scroll Reveal Observer ============
@@ -811,7 +853,7 @@ function signedNum(v) {
 
 // ============ 内嵌回退数据（data.json加载失败时使用）============
 const FALLBACK_DATA = {
-  "meta": { "year":2026, "lastUpdated":"2026-06-18", "city":"济南", "province":"山东", "basePrice92":6.67 },
+  "meta": { "year":2026, "lastUpdated":"2026-06-18", "city":"济南", "province":"山东", "basePrice92":6.67, "base95":7.16 },
   "prices2026": [
     {"round":1,"date":"2026-01-06","type":"flat","gas":0,"diesel":0,"p92":6.67,"p95":7.16,"p98":8.16,"pDiesel":6.26},
     {"round":2,"date":"2026-01-20","type":"up","gas":85,"diesel":85,"p92":6.74,"p95":7.23,"p98":8.23,"pDiesel":6.33},
@@ -879,13 +921,13 @@ async function init() {
     // ---- Hero Stats ----
     const ups = prices.filter(d => d.type === 'up').length;
     const downs = prices.filter(d => d.type === 'down').length;
-    const cumL92 = +(last.p92 - baseL92).toFixed(2);
-    const cumSign = cumL92 >= 0 ? '+' : '';
+    const cumL95 = +(last.p95 - FALLBACK_DATA.meta.base95).toFixed(2);
+    const cumSign = cumL95 >= 0 ? '+' : '';
 
     document.getElementById('hero-rounds').textContent = prices.length;
     document.getElementById('hero-ups').textContent = ups;
     document.getElementById('hero-downs').textContent = downs;
-    document.getElementById('hero-cumulative').textContent = cumSign + cumL92.toFixed(2);
+    document.getElementById('hero-cumulative').textContent = cumSign + cumL95.toFixed(2);
 
     // ---- 当前油价 ----
     const prev = prices.length >= 2 ? prices[prices.length - 2] : null;
