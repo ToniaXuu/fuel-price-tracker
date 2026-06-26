@@ -12,7 +12,7 @@
 
 import json, sys, os, hmac, hashlib, base64, time, urllib.parse
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 try:
     import requests
@@ -133,18 +133,56 @@ def today_cn():
     return f"{now.month}月{now.day}日 {weekdays[now.weekday()]}"
 
 
+def now_time_cn():
+    """当前精确时间，如 09:05"""
+    return datetime.now().strftime("%H:%M")
+
+
+def add_working_days(start_str, n):
+    """从 start_date 起算 n 个工作日后的日期"""
+    start = datetime.strptime(start_str, "%Y-%m-%d")
+    days_added = 0
+    current = start
+    while days_added < n:
+        current += timedelta(days=1)
+        if current.weekday() < 5:  # 0-4 周一至周五
+            days_added += 1
+    return current.strftime("%Y-%m-%d")
+
+
+def build_calendar_info(prices, latest):
+    """构建日历信息：上一轮、当前轮、下一轮"""
+    idx = next((i for i, p in enumerate(prices) if p["round"] == latest["round"]), -1)
+    prev_entry = prices[idx - 1] if idx > 0 else None
+    # 下一轮调价日 ≈ 当前轮日期 + 10个工作日
+    next_date = add_working_days(latest["date"], 10)
+
+    prev_str = f"第{prev_entry['round']}轮 {format_date(prev_entry['date'])}" if prev_entry else "—"
+    current_str = f"第{latest['round']}轮 {format_date(latest['date'])}"
+    next_str = format_date(next_date)
+
+    return prev_str, current_str, next_str
+
+
 def build_daily_report(prices, has_change, weather):
     """构建每日油价+天气通知"""
     latest = prices[-1]
     prev = prices[-2] if len(prices) >= 2 else latest
     date_str = format_date(latest["date"])
     today = today_cn()
+    now_time = now_time_cn()
     today_iso = datetime.now().strftime("%Y-%m-%d")
     yesterday_iso = (datetime.now().replace(day=datetime.now().day - 1) if datetime.now().day > 1
                      else datetime.now().replace(month=datetime.now().month - 1, day=28)).strftime("%Y-%m-%d")
 
     # 判断最近一次调价是否"新鲜"（数据条目日期为今天或昨天）
     recent_change = latest["date"] in (today_iso, yesterday_iso) and latest["type"] != "flat"
+
+    # ---- 日历信息 ----
+    prev_round, cur_round, next_date = build_calendar_info(prices, latest)
+
+    # ---- 当前时间 + 轮次状态 ----
+    time_status = f"🕐 {today} {now_time}\n📌 当前处于 {cur_round} 周期内"
 
     # ---- 天气 ----
     wx_section_wx = ""
@@ -155,15 +193,27 @@ def build_daily_report(prices, has_change, weather):
         )
         if weather["rain_pct"] and weather["rain_pct"] > 20:
             wx_line += f"  降水概率 {weather['rain_pct']}%"
-        wx_section_wx = wx_line + "\n\n"
-        wx_section_dt = wx_line + "\n\n"
+        wx_section_wx = f"🌤 天气 | {wx_line}\n\n"
+        wx_section_dt = f"🌤 天气 | {wx_line}\n\n"
 
-    # ---- 油价 ----
+    # ---- 油价明细 ----
     delta_92 = round(latest["p92"] - prev["p92"], 2)
     delta_95 = round(latest["p95"] - prev["p95"], 2)
     delta_diesel = round(latest["pDiesel"] - prev["pDiesel"], 2)
     arrow = lambda v: "▲" if v > 0 else ("▼" if v < 0 else "—")
     sign = lambda v: "+" if v > 0 else ""
+    oil_detail = (
+        f"⛽ 92#：**{latest['p92']}** 元/升\n"
+        f"⛽ 95#：**{latest['p95']}** 元/升\n"
+        f"⛽ 98#：**{latest['p98']}** 元/升\n"
+        f"🛢️ 0#柴油：**{latest['pDiesel']}** 元/升"
+    )
+    oil_detail_plain = (
+        f"⛽ 92#：{latest['p92']} 元/升\n"
+        f"⛽ 95#：{latest['p95']} 元/升\n"
+        f"⛽ 98#：{latest['p98']} 元/升\n"
+        f"🛢️ 0#柴油：{latest['pDiesel']} 元/升"
+    )
 
     if has_change and latest["type"] != "flat":
         # 18:00 刚抓到调价公告 → "今晚24时起"
@@ -172,28 +222,42 @@ def build_daily_report(prices, has_change, weather):
         gas_ton = abs(latest["gas"])
         diesel_ton = abs(latest["diesel"])
         tag = "⏰ 今晚24时生效"
-
-        wx_title = f"🛢️ 油价{type_str} | {tag}"
-        wx_body = (
-            f"{wx_section_wx}"
-            f"📢 {tag}\n\n"
-            f"📅 {date_str} 调价 · 第{latest['round']}轮\n"
-            f"{type_str} {gas_ton}元/吨（汽油）/ {diesel_ton}元/吨（柴油）\n\n"
+        adj_detail = (
+            f"\n📊 变动 | {type_str} {gas_ton}元/吨（汽油）/ {diesel_ton}元/吨（柴油）\n"
             f"⛽ 92#：{prev['p92']} → {latest['p92']} 元/升（{arrow(delta_92)} {sign(delta_92)}{delta_92}）\n"
-            f"⛽ 95#：{prev['p95']} → {latest['p95']} 元/升（{arrow(delta_95)} {sign(delta_95)}{delta_95}）\n"
-            f"🛢️ 0#柴油：{prev['pDiesel']} → {latest['pDiesel']} 元/升（{arrow(delta_diesel)} {sign(delta_diesel)}{delta_diesel}）\n\n"
-            f"🔗 [查看详情]({PAGE_URL})"
+            f"🛢️ 0#柴油：{prev['pDiesel']} → {latest['pDiesel']} 元/升（{arrow(delta_diesel)} {sign(delta_diesel)}{delta_diesel}）"
         )
-        dt_title = wx_title
-        dt_body = (
-            f"{wx_section_dt}"
-            f"## 🛢️ 油价{type_str}\n\n"
-            f"> ⏰ 今晚24时生效\n\n"
-            f"**{date_str} 调价 · 第{latest['round']}轮**\n\n"
+        adj_detail_md = (
+            f"\n\n📊 **变动明细**\n\n"
             f"{type_str} {gas_ton}元/吨（汽油）/ {diesel_ton}元/吨（柴油）\n\n"
             f"- ⛽ 92#：~~{prev['p92']}~~ → **{latest['p92']}** 元/升（{arrow(delta_92)} {sign(delta_92)}{delta_92}）\n"
             f"- ⛽ 95#：~~{prev['p95']}~~ → **{latest['p95']}** 元/升（{arrow(delta_95)} {sign(delta_95)}{delta_95}）\n"
-            f"- 🛢️ 0#柴油：~~{prev['pDiesel']}~~ → **{latest['pDiesel']}** 元/升（{arrow(delta_diesel)} {sign(delta_diesel)}{delta_diesel}）\n\n"
+            f"- 🛢️ 0#柴油：~~{prev['pDiesel']}~~ → **{latest['pDiesel']}** 元/升（{arrow(delta_diesel)} {sign(delta_diesel)}{delta_diesel}）"
+        )
+
+        wx_title = f"🛢️ 油价{type_str} | {today}"
+        wx_body = (
+            f"{time_status}\n\n"
+            f"{wx_section_wx}"
+            f"📢 **{tag}**\n\n"
+            f"{oil_detail_plain}\n"
+            f"{adj_detail}\n\n"
+            f"📅 上一轮：{prev_round}\n"
+            f"📅 下一轮：{next_date}\n\n"
+            f"🔗 [查看详情]({PAGE_URL})"
+        )
+        dt_title = f"🛢️ 油价{type_str} | {tag}"
+        dt_body = (
+            f"## 🛢️ 油价{type_str}\n\n"
+            f"{time_status}\n\n"
+            f"> ⏰ **今晚24时生效**\n\n"
+            f"---\n\n"
+            f"### 当前价格\n\n"
+            f"{oil_detail}\n"
+            f"{adj_detail_md}\n\n"
+            f"---\n\n"
+            f"📅 上一轮：{prev_round}\n\n"
+            f"📅 下一轮预计：{next_date}\n\n"
             f"[📊 查看详情]({PAGE_URL})"
         )
 
@@ -203,29 +267,40 @@ def build_daily_report(prices, has_change, weather):
         type_str = type_map.get(latest["type"], "？")
         gas_ton = abs(latest["gas"])
         diesel_ton = abs(latest["diesel"])
-        tag = "✅ 已生效" if latest["date"] == yesterday_iso else "📢 今日生效"
+        adj_detail = (
+            f"\n📊 变动 | {type_str} {gas_ton}元/吨（汽油）/ {diesel_ton}元/吨（柴油）\n"
+            f"⛽ 92#：{prev['p92']} → {latest['p92']} 元/升（{arrow(delta_92)} {sign(delta_92)}{delta_92}）\n"
+            f"🛢️ 0#柴油：{prev['pDiesel']} → {latest['pDiesel']} 元/升（{arrow(delta_diesel)} {sign(delta_diesel)}{delta_diesel}）"
+        )
+        adj_detail_md = (
+            f"\n\n📊 **变动明细**\n\n"
+            f"{type_str} {gas_ton}元/吨（汽油）/ {diesel_ton}元/吨（柴油）\n\n"
+            f"- ⛽ 92#：~~{prev['p92']}~~ → **{latest['p92']}** 元/升（{arrow(delta_92)} {sign(delta_92)}{delta_92}）\n"
+            f"- ⛽ 95#：~~{prev['p95']}~~ → **{latest['p95']}** 元/升（{arrow(delta_95)} {sign(delta_95)}{delta_95}）\n"
+            f"- 🛢️ 0#柴油：~~{prev['pDiesel']}~~ → **{latest['pDiesel']}** 元/升（{arrow(delta_diesel)} {sign(delta_diesel)}{delta_diesel}）"
+        )
 
         wx_title = f"🛢️ 油价{type_str} | {today}"
         wx_body = (
+            f"{time_status}\n\n"
             f"{wx_section_wx}"
-            f"{tag}\n\n"
-            f"📅 {date_str} 调价 · 第{latest['round']}轮\n"
-            f"{type_str} {gas_ton}元/吨（汽油）/ {diesel_ton}元/吨（柴油）\n\n"
-            f"⛽ 92#：{prev['p92']} → {latest['p92']} 元/升（{arrow(delta_92)} {sign(delta_92)}{delta_92}）\n"
-            f"⛽ 95#：{prev['p95']} → {latest['p95']} 元/升（{arrow(delta_95)} {sign(delta_95)}{delta_95}）\n"
-            f"🛢️ 0#柴油：{prev['pDiesel']} → {latest['pDiesel']} 元/升（{arrow(delta_diesel)} {sign(delta_diesel)}{delta_diesel}）\n\n"
+            f"{oil_detail_plain}\n"
+            f"{adj_detail}\n\n"
+            f"📅 上一轮：{prev_round}\n"
+            f"📅 下一轮：{next_date}\n\n"
             f"🔗 [查看详情]({PAGE_URL})"
         )
         dt_title = wx_title
         dt_body = (
-            f"{wx_section_dt}"
             f"## 🛢️ 油价{type_str}\n\n"
-            f"{tag}\n\n"
-            f"**{date_str} 调价 · 第{latest['round']}轮**\n\n"
-            f"{type_str} {gas_ton}元/吨（汽油）/ {diesel_ton}元/吨（柴油）\n\n"
-            f"- ⛽ 92#：~~{prev['p92']}~~ → **{latest['p92']}** 元/升（{arrow(delta_92)} {sign(delta_92)}{delta_92}）\n"
-            f"- ⛽ 95#：~~{prev['p95']}~~ → **{latest['p95']}** 元/升（{arrow(delta_95)} {sign(delta_95)}{delta_95}）\n"
-            f"- 🛢️ 0#柴油：~~{prev['pDiesel']}~~ → **{latest['pDiesel']}** 元/升（{arrow(delta_diesel)} {sign(delta_diesel)}{delta_diesel}）\n\n"
+            f"{time_status}\n\n"
+            f"---\n\n"
+            f"### 现行价格\n\n"
+            f"{oil_detail}\n"
+            f"{adj_detail_md}\n\n"
+            f"---\n\n"
+            f"📅 上一轮：{prev_round}\n\n"
+            f"📅 下一轮预计：{next_date}\n\n"
             f"[📊 查看详情]({PAGE_URL})"
         )
 
@@ -233,24 +308,24 @@ def build_daily_report(prices, has_change, weather):
         # 日常油价播报
         wx_title = f"⛽ 今日油价 | {today}"
         wx_body = (
+            f"{time_status}\n\n"
             f"{wx_section_wx}"
-            f"📅 {date_str} 油价（维持上轮不变）\n\n"
-            f"⛽ 92#：{latest['p92']} 元/升\n"
-            f"⛽ 95#：{latest['p95']} 元/升\n"
-            f"⛽ 98#：{latest['p98']} 元/升\n"
-            f"🛢️ 0#柴油：{latest['pDiesel']} 元/升\n\n"
+            f"{oil_detail_plain}\n\n"
+            f"📅 上一轮：{prev_round}\n"
+            f"📅 下一轮预计：{next_date}\n\n"
             f"— 以上为济南地区最高零售价 —\n\n"
             f"🔗 [查看详情]({PAGE_URL})"
         )
         dt_title = wx_title
         dt_body = (
-            f"{wx_section_dt}"
             f"## ⛽ 今日油价 · 济南\n\n"
-            f"**{date_str}** （维持上轮不变）\n\n"
-            f"- ⛽ 92#：**{latest['p92']}** 元/升\n"
-            f"- ⛽ 95#：**{latest['p95']}** 元/升\n"
-            f"- ⛽ 98#：**{latest['p98']}** 元/升\n"
-            f"- 🛢️ 0#柴油：**{latest['pDiesel']}** 元/升\n\n"
+            f"{time_status}\n\n"
+            f"---\n\n"
+            f"### 现行价格\n\n"
+            f"{oil_detail}\n\n"
+            f"---\n\n"
+            f"📅 上一轮：{prev_round}\n\n"
+            f"📅 下一轮预计：{next_date}\n\n"
             f"> 以上为济南地区最高零售价\n\n"
             f"[📊 查看详情]({PAGE_URL})"
         )
