@@ -155,7 +155,7 @@ def build_msg(prices, has_change, weather):
             f"💡 **建议**：{tip}"
         )
 
-    header = f"🕐 {today} {now_t}　|　📌 当前处于 {cur_str} 周期\n\n{wx}📅 距上次调价已过 **{days_cnt}** 天"
+    header = f"🕐 {today} {now_t}\n📌 {cur_str}\n📅 已过 {days_cnt} 天\n{wx}".strip()
 
     if has_change and latest["type"] != "flat":
         title = f"🛢️ 油价{'🔺上调' if latest['type']=='up' else '🔻下调'} | 今晚24时生效"
