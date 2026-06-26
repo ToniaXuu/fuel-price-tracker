@@ -4,10 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>国内成品油价格趋势 · 济南站</title>
+  <meta name="description" content="追踪济南地区92#/95#/98#汽油及0#柴油每日价格走势，最新调价动态与历史数据对比分析，数据来源国家发展和改革委员会。" />
+  <meta property="og:title" content="国内成品油价格趋势 · 济南站" />
+  <meta property="og:description" content="追踪济南地区92#/95#/98#汽油及0#柴油每日价格走势，最新调价动态。" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://ToniaXuu.github.io/fuel-price-tracker/" />
+  <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" href="./favicon.jpg" type="image/jpeg" />
   <link rel="manifest" href="./manifest.json" />
   <meta name="theme-color" content="#3b82f6" />
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
   <style>
     :root {
       --bg: #f0f2f7;
@@ -201,6 +207,13 @@
 
     /* ===== CONTAINER ===== */
     .container { max-width: 1140px; margin: 0 auto; padding: 48px 20px 80px; position: relative; z-index: 1; }
+
+    /* ===== RESPONSIVE FONTS ===== */
+    @media (max-width: 640px) {
+      .price-cell .p-value { font-size: 22px; }
+      .qstat .value { font-size: 26px; }
+      .section-title { font-size: 16px; }
+    }
 
     /* ===== SECTION TITLE ===== */
     .section-title {
@@ -748,9 +761,8 @@
 // ============ 进度条 ============
 window.addEventListener('scroll', () => {
   const scrollH = document.documentElement.scrollHeight - window.innerHeight;
-  const progress = scrollH > 0 ? (window.scrollY / scrollH) * 100 : 0;
-  document.getElementById('progressBar').style.width = progress + '%';
-});
+  document.getElementById('progressBar').style.width = scrollH > 0 ? (window.scrollY / scrollH) * 100 + '%' : '0%';
+}, { passive: true });
 
 // ============ Scroll Reveal Observer ============
 const revealObserver = new IntersectionObserver((entries) => {
