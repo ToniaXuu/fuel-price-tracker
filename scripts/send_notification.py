@@ -162,14 +162,14 @@ def detect_streak(prices):
         return f"↔️ 单次{ {'up':'上调','down':'下调','flat':'搁浅'}.get(last['type'],'?') }"
 
 
-def build_tip(delta_92):
+def build_tip(delta_95):
     """根据最近变动给出用车建议"""
-    if delta_92 < 0:
-        return "💡 92# 下降中，若油箱不急需建议先少量加油，等待下一轮"
-    elif delta_92 == 0:
+    if delta_95 < 0:
+        return "💡 95# 下降中，若油箱不急需建议先少量加油，等待下一轮"
+    elif delta_95 == 0:
         return "💡 油价暂时稳定，不急于加油可关注下一轮调价"
     else:
-        return "💡 92# 上涨趋势中，建议趁周末及时加满"
+        return "💡 95# 上涨趋势中，建议趁周末及时加满"
 
 
 # ========================== 主消息构建 ==========================
@@ -198,9 +198,9 @@ def build_message(prices, has_change, weather):
     cur_str = f"第{latest['round']}轮 {format_date(latest['date'])}"
 
     # ---- 附加信息 ----
-    tank92 = round(latest["p92"] * TANK_SIZE, 2)
-    base = 6.67  # 年初92基础价
-    ytd = round(latest["p92"] - base, 2)
+    tank95 = round(latest["p95"] * TANK_SIZE, 2)
+    base95 = 7.16  # 年初95基础价
+    ytd = round(latest["p95"] - base95, 2)
     days_cnt = days_since(latest["date"])
     streak_text = detect_streak(prices)
 
@@ -236,16 +236,16 @@ def build_message(prices, has_change, weather):
 
     # ---- 实用信息 ----
     info = (
-        f"💰 加满一箱92#（{TANK_SIZE}L）：**{tank92} 元**\n"
-        f"📊 年初至今 92# 累计：**{sg(ytd)}{ytd} 元/升**\n"
+        f"💰 加满一箱95#（{TANK_SIZE}L）：**{tank95} 元**\n"
+        f"📊 年初至今 95# 累计：**{sg(ytd)}{ytd} 元/升**\n"
         f"🔍 趋势：{streak_text}\n"
-        f"💡 {build_tip(delta_92)}"
+        f"💡 {build_tip(delta_95)}"
     )
     info_plain = (
-        f"💰 加满一箱92#（{TANK_SIZE}L）：{tank92} 元\n"
-        f"📊 年初至今 92# 累计：{sg(ytd)}{ytd} 元/升\n"
+        f"💰 加满一箱95#（{TANK_SIZE}L）：{tank95} 元\n"
+        f"📊 年初至今 95# 累计：{sg(ytd)}{ytd} 元/升\n"
         f"🔍 趋势：{streak_text}\n"
-        f"💡 {build_tip(delta_92)}"
+        f"💡 {build_tip(delta_95)}"
     )
 
     # ---- 日历 ----
