@@ -10,9 +10,31 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://ToniaXuu.github.io/fuel-price-tracker/" />
   <meta name="twitter:card" content="summary_large_image" />
-  <link rel="icon" href="./favicon.jpg" type="image/jpeg" />
+  <link rel="icon" href="./favicon.png" type="image/png" />
   <link rel="manifest" href="./manifest.json" />
   <meta name="theme-color" content="#3b82f6" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    "name": "国内成品油价格趋势 · 济南站",
+    "description": "追踪济南地区92#/95#/98#汽油及0#柴油价格调整记录与走势分析",
+    "url": "https://ToniaXuu.github.io/fuel-price-tracker/",
+    "keywords": ["油价", "成品油", "汽油", "柴油", "济南", "调价"],
+    "creator": {
+      "@type": "Organization",
+      "name": "ToniaXuu"
+    },
+    "spatialCoverage": {
+      "@type": "Place",
+      "name": "济南",
+      "containedInPlace": { "@type": "Place", "name": "山东,中国" }
+    },
+    "temporalCoverage": "2026-01-06/..",
+    "isAccessibleForFree": true,
+    "license": "MIT"
+  }
+  </script>
   <script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
   <style>
     :root {
@@ -623,19 +645,19 @@
 
   <!-- ========== 趋势图 ========== -->
   <div class="card reveal">
-    <div class="section-title">济南成品油零售价格走势（元/升）</div>
+    <div class="section-title">📈 济南成品油零售价格走势（元/升）</div>
     <div class="chart-wrap"><div id="mainChart" style="width:100%;height:100%"></div></div>
   </div>
 
   <!-- ========== 柱状图 ========== -->
   <div class="card reveal">
-    <div class="section-title">历次调价幅度对比（元/吨）</div>
+    <div class="section-title">📊 历次调价幅度对比（元/吨）</div>
     <div class="chart-wrap"><div id="barChart" style="width:100%;height:100%"></div></div>
   </div>
 
   <!-- ========== 数据表格 ========== -->
   <div class="card reveal">
-    <div class="section-title">📋 2026年全部调价记录 · 济南地区</div>
+    <div class="section-title" id="tableSectionTitle">📋 全部调价记录</div>
     <div class="tbl-wrap">
       <table class="data-table">
         <thead>
@@ -665,55 +687,8 @@
         <strong>济南作为山东省会</strong>，是华北重要的交通枢纽和物流集散中心。油价变动对本地约<strong>340万辆</strong>机动车、数万名网约车司机、以及通达全省的货运网络产生直接影响。以下按时间分段分析。
       </div>
     </div>
-    <div class="timeline">
-
-      <div class="tl-item up reveal" style="transition-delay:0s">
-        <div class="tl-dot"></div>
-        <div class="tl-date">2026年1月6日 — 3月23日</div>
-        <div class="tl-title">Q1 五连涨 · 中东局势引爆油价</div>
-        <div class="tl-body">
-          年初国际原油市场因地缘冲突剧烈波动，霍尔木兹海峡通行受阻推高原油价格。<strong>济南92#从6.67涨至8.53元/升，95#从7.16涨至9.15元/升，0#柴油从6.26涨至8.16元/升</strong>，各油品涨幅均超30%。3月23日单次上调1160元/吨创三年新高。<br><br>
-          <strong>🏠 对济南居民的影响：</strong>以一辆百公里油耗10升的家用车、月行1000公里计算，月油费从<strong>667元涨至853元</strong>，增加约186元。济南经十路、北园高架等主干道通勤成本显著上升。网约车燃油附加费上调至1.5元/单，外卖配送费普遍上涨0.5~1元。
-        </div>
-      </div>
-
-      <div class="tl-item up reveal" style="transition-delay:0.15s">
-        <div class="tl-dot"></div>
-        <div class="tl-date">2026年4月7日</div>
-        <div class="tl-title">Q2初再涨 · 到达年内最高点</div>
-        <div class="tl-body">
-          4月7日汽油再涨420元/吨，<strong>济南92#达到年内峰值8.87元/升，95# 9.51元/升，98#突破10.51元/升</strong>。济南市区加油站排长队加油现象频现。清明假期出行成本达历年最高，济南至泰安、淄博等短途自驾游意愿明显下降。柴油车货运成本飙升，济南盖家沟物流园区运价普遍上调10%~15%。
-        </div>
-      </div>
-
-      <div class="tl-item down reveal" style="transition-delay:0.3s">
-        <div class="tl-dot"></div>
-        <div class="tl-date">2026年4月21日</div>
-        <div class="tl-title">年内首降 · -555元/吨，喘息之机</div>
-        <div class="tl-body">
-          美伊局势出现和谈信号，国际原油回调，国内迎来2026年首次降价。济南92#回落至8.42元/升，加满50升可省约22元。<strong>然而整体油价仍比年初贵1.75元/升</strong>（92#），降价的边际效益有限，仅起到短期心理安慰作用。
-        </div>
-      </div>
-
-      <div class="tl-item up reveal" style="transition-delay:0.45s">
-        <div class="tl-dot"></div>
-        <div class="tl-date">2026年5月8日 — 5月21日</div>
-        <div class="tl-title">五月两连涨 · 端午节前再度走高</div>
-        <div class="tl-body">
-          5月两轮合计上调395元/吨，济南92#回升至8.74元/升、0#柴油8.38元/升。端午节前物流高峰叠加高油价，快递和生鲜配送成本居高不下，济南市区部分超市和菜市场价格出现轻微传导。
-        </div>
-      </div>
-
-      <div class="tl-item down reveal" style="transition-delay:0.6s">
-        <div class="tl-dot"></div>
-        <div class="tl-date">2026年6月4日 — 6月18日</div>
-        <div class="tl-title">618两连降 · -1040元/吨，年内最大幅度回落</div>
-        <div class="tl-body">
-          6月4日降525元/吨（-0.42元/升），6月18日再降515元/吨（-0.41元/升）。<strong>两轮合计，济南92#从8.74降至7.91元/升，累计降0.83元/升；0#柴油从8.38降至7.55元/升，降0.83元/升。</strong>50升油箱加满92#可省约41.5元。<br><br>
-          <strong>🏠 618+端午双重利好：</strong>油价下降与618购物节、端午假期高度重叠：①自驾出游成本大幅回落，济南至青岛、烟台等沿海线路走热；②电商大件商品物流成本同步下降；③货运行业终于迎来喘息，盖家沟物流园运价松动下行，部分线路降幅达5%~8%。
-        </div>
-      </div>
-
+    <div class="timeline" id="timelineContainer">
+      <!-- 由 JS 动态生成 -->
     </div>
   </div>
 
@@ -723,22 +698,22 @@
     <div class="impact-card n1 reveal">
       <div class="ic-icon">🚗</div>
       <div class="ic-title">私家车主 · 日常通勤</div>
-      <div class="ic-body">
-        以济南经十路通勤族为例：Q1五连涨后月度油费飙升近200元；618双降后月均油费回落至约791元。全年油费波动幅度超220元/月，高位期间不少车主选择拼车或临时换乘BRT。
+      <div class="ic-body" id="icBody1">
+        以济南经十路通勤族为例：Q1五连涨后月度油费飙升近<span class="ic-dyn" id="icPeakCost">—</span>元；近期调价后月均油费约<span class="ic-dyn" id="icCurrentCost">—</span>元。全年油费波动幅度超<span class="ic-dyn" id="icAmpCost">—</span>元/月，高位期间不少车主选择拼车或临时换乘BRT。
       </div>
     </div>
     <div class="impact-card n2 reveal">
       <div class="ic-icon">🛵</div>
       <div class="ic-title">网约车 · 外卖配送</div>
-      <div class="ic-body">
-        3~5月高油价期，济南各网约车平台燃油附加费从0.5元上调至最高1.5元/单。全职网约车司机月增油费约600~800元，部分司机选择错峰出车降低空驶率。6月降价后附加费逐步回调。
+      <div class="ic-body" id="icBody2">
+        高油价期间网约车燃油附加费上调，全职网约车司机月增油费约<span class="ic-dyn" id="icDriverCost">—</span>元，部分司机选择错峰出车降低空驶率。油价回落后附加费逐步回调。
       </div>
     </div>
     <div class="impact-card n3 reveal">
       <div class="ic-icon">🚛</div>
       <div class="ic-title">物流货运 · 盖家沟</div>
-      <div class="ic-body">
-        济南盖家沟物流园区是山东最大公路货运枢纽。年初至5月柴油涨幅达2.12元/升，400升大货车单次加满多花近850元，部分专线被迫提价10%~15%。6月双降后运价逐步回调，物流企业经营压力明显缓解。
+      <div class="ic-body" id="icBody3">
+        济南盖家沟物流园区是山东最大公路货运枢纽。柴油价格波动幅度达<span class="ic-dyn" id="icDieselAmp">—</span>元/升，400升大货车单次加满多花近<span class="ic-dyn" id="icDieselCost">—</span>元，部分专线被迫提价。油价回落后运价逐步回调，物流企业经营压力有所缓解。
       </div>
     </div>
     <div class="impact-card n4 reveal">
@@ -782,8 +757,11 @@
 // ============ 浮动粒子（不依赖数据，提前渲染）============
 (function particles() {
   const container = document.getElementById('particles');
+  if (!container) return;
   const colors = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899'];
-  for (let i = 0; i < 30; i++) {
+  const isMobile = window.innerWidth < 768;
+  const count = isMobile ? 12 : 30;
+  for (let i = 0; i < count; i++) {
     const p = document.createElement('div');
     p.className = 'particle';
     const size = Math.random() * 6 + 2;
@@ -799,11 +777,18 @@
 })();
 
 // ============ 进度条 ============
+let _scrollPending = false;
 window.addEventListener('scroll', () => {
-  const scrollH = document.documentElement.scrollHeight - window.innerHeight;
-  const st = window.scrollY;
-  document.getElementById('progressBar').style.width = scrollH > 0 ? (st / scrollH) * 100 + '%' : '0%';
-  document.getElementById('backTop').classList.toggle('visible', st > 600);
+  if (!_scrollPending) {
+    _scrollPending = true;
+    requestAnimationFrame(() => {
+      const scrollH = document.documentElement.scrollHeight - window.innerHeight;
+      const st = window.scrollY;
+      document.getElementById('progressBar').style.width = scrollH > 0 ? (st / scrollH) * 100 + '%' : '0%';
+      document.getElementById('backTop').classList.toggle('visible', st > 600);
+      _scrollPending = false;
+    });
+  }
 }, { passive: true });
 
 // ============ Scroll Reveal Observer ============
@@ -853,7 +838,7 @@ function signedNum(v) {
 
 // ============ 内嵌回退数据（data.json加载失败时使用）============
 const FALLBACK_DATA = {
-  "meta": { "year":2026, "lastUpdated":"2026-06-18", "city":"济南", "province":"山东", "basePrice92":6.67, "base95":7.16 },
+  "meta": { "year":2026, "lastUpdated":"2026-07-03", "city":"济南", "province":"山东", "basePrice92":6.67, "base95":7.16 },
   "prices2026": [
     {"round":1,"date":"2026-01-06","type":"flat","gas":0,"diesel":0,"p92":6.67,"p95":7.16,"p98":8.16,"pDiesel":6.26},
     {"round":2,"date":"2026-01-20","type":"up","gas":85,"diesel":85,"p92":6.74,"p95":7.23,"p98":8.23,"pDiesel":6.33},
@@ -866,7 +851,8 @@ const FALLBACK_DATA = {
     {"round":9,"date":"2026-05-08","type":"up","gas":320,"diesel":310,"p92":8.68,"p95":9.31,"p98":10.31,"pDiesel":8.32},
     {"round":10,"date":"2026-05-21","type":"up","gas":75,"diesel":70,"p92":8.74,"p95":9.37,"p98":10.37,"pDiesel":8.38},
     {"round":11,"date":"2026-06-04","type":"down","gas":-525,"diesel":-505,"p92":8.32,"p95":8.92,"p98":10.37,"pDiesel":7.95},
-    {"round":12,"date":"2026-06-18","type":"down","gas":-515,"diesel":-495,"p92":7.91,"p95":8.48,"p98":9.96,"pDiesel":7.55}
+    {"round":12,"date":"2026-06-18","type":"down","gas":-515,"diesel":-495,"p92":7.91,"p95":8.48,"p98":9.96,"pDiesel":7.55},
+    {"round":13,"date":"2026-07-03","type":"down","gas":-950,"diesel":-915,"p92":7.15,"p95":7.66,"p98":9.11,"pDiesel":6.81}
   ],
   // 2025年同期参考数据（按对应日期匹配，用于同比线）
   "prices2025": [
@@ -918,10 +904,17 @@ async function init() {
     document.getElementById('updateDate').textContent =
       meta.year + '年' + formatDate(meta.lastUpdated);
 
+    // ---- 表格标题 ----
+    document.getElementById('tableSectionTitle').textContent =
+      '📋 ' + meta.year + '年全部调价记录 · ' + meta.city + '地区';
+
+    // ---- 影响卡片数值填充 ----
+    updateImpactCards(prices, meta.city);
+
     // ---- Hero Stats ----
     const ups = prices.filter(d => d.type === 'up').length;
     const downs = prices.filter(d => d.type === 'down').length;
-    const cumL95 = +(last.p95 - FALLBACK_DATA.meta.base95).toFixed(2);
+    const cumL95 = +(last.p95 - prices[0].p95).toFixed(2);
     const cumSign = cumL95 >= 0 ? '+' : '';
 
     document.getElementById('hero-rounds').textContent = prices.length;
@@ -1013,14 +1006,11 @@ async function init() {
     renderMainChart(prices, prices2025);
     renderBarChart(prices);
 
+    // ---- 动态生成时间线 ----
+    generateTimeline(prices, meta.city);
+
     // ---- 启动 Reveal 观察 ----
     document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-
-    // ---- 启动 Timeline reveal（timeline 有自己的 visible 逻辑）----
-    const tlObserver = new IntersectionObserver((entries) => {
-      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
-    document.querySelectorAll('.tl-item').forEach(el => tlObserver.observe(el));
 
     // 加载失败时显示回退提示
     if (dataLoadFailed && !retryBtnAdded) {
@@ -1139,9 +1129,43 @@ function renderTable(prices, baseL92) {
 }
 
 // ============ 走势图 (ECharts) ============
+// ============ 图表主题 ============
+let _chartTheme = null;
+let _mainChartInst = null;
+let _barChartInst = null;
+function getChartTheme() {
+  if (_chartTheme) return _chartTheme;
+  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  _chartTheme = {
+    dark,
+    axisLabel: dark ? '#94a3b8' : '#6b7280',
+    axisLine: dark ? '#334155' : '#e5e7eb',
+    splitLine: dark ? '#1e293b' : '#f1f5f9',
+    dataZoomBg: dark ? '#1e293b' : '#f1f5f9',
+    dataZoomFill: 'rgba(59,130,246,.15)',
+    dieselLine: dark ? '#94a3b8' : '#374151',
+    legendText: dark ? '#94a3b8' : '#374151',
+    gridLineColor: dark ? '#1e293b' : '#f1f5f9',
+  };
+  return _chartTheme;
+}
+
+// 监听系统主题变化，重绘图表
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  _chartTheme = null; // 清除缓存
+  if (_mainChartInst) { _mainChartInst.dispose(); _mainChartInst = null; }
+  if (_barChartInst) { _barChartInst.dispose(); _barChartInst = null; }
+  const meta = document.getElementById('heroCity').textContent.includes('济南') ? null : null;
+  // 从 DOM 重新获取数据并重绘（通过重新触发 init 中的图表部分不太可行，改为直接重绘）
+  location.reload();
+});
+
 function renderMainChart(prices, prices2025) {
+  const t = getChartTheme();
   const chartDom = document.getElementById('mainChart');
-  const chart = echarts.init(chartDom);
+  if (_mainChartInst) _mainChartInst.dispose();
+  const chart = echarts.init(chartDom, t.dark ? 'dark' : undefined);
+  _mainChartInst = chart;
 
   const labels = prices.map(d => formatDate(d.date));
   const allPrices = [...prices.map(d=>d.p92), ...prices.map(d=>d.p95), ...prices.map(d=>d.p98), ...prices.map(d=>d.pDiesel)];
@@ -1209,7 +1233,7 @@ function renderMainChart(prices, prices2025) {
     },
     legend: {
       top: 0, left: 'center',
-      textStyle: { fontSize: 12 },
+      textStyle: { fontSize: 12, color: t.axisLabel },
       itemWidth: 20, itemHeight: 3
     },
     grid: { left: 55, right: 40, top: 52, bottom: 58 },
@@ -1220,19 +1244,19 @@ function renderMainChart(prices, prices2025) {
       }
     },
     dataZoom: [
-      { type: 'slider', bottom: 8, height: 12, borderColor: 'transparent', backgroundColor: '#f1f5f9', fillerColor: 'rgba(59,130,246,.12)', handleStyle: { color: '#3b82f6' } },
+      { type: 'slider', bottom: 8, height: 12, borderColor: 'transparent', backgroundColor: t.dataZoomBg, fillerColor: t.dataZoomFill, handleStyle: { color: '#3b82f6' }, textStyle: { color: t.axisLabel } },
       { type: 'inside' }
     ],
     xAxis: {
       type: 'category', data: labels, boundaryGap: false,
-      axisLine: { lineStyle: { color: '#e5e7eb' } },
-      axisLabel: { color: '#6b7280', fontSize: 11, rotate: labels.length > 15 ? 45 : 0 },
+      axisLine: { lineStyle: { color: t.axisLine } },
+      axisLabel: { color: t.axisLabel, fontSize: 11, rotate: labels.length > 15 ? 45 : 0 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value', min: yMin, max: yMax,
-      axisLabel: { formatter: '{value} 元', color: '#6b7280', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#f1f5f9' } }
+      axisLabel: { formatter: '{value} 元', color: t.axisLabel, fontSize: 11 },
+      splitLine: { lineStyle: { color: t.splitLine } }
     },
     series: [
       {
@@ -1261,8 +1285,8 @@ function renderMainChart(prices, prices2025) {
       {
         name: '0# 柴油', type: 'line', data: prices.map(d=>d.pDiesel),
         smooth: true, symbol: 'circle', symbolSize: 5,
-        lineStyle: { color: '#374151', width: 2 },
-        itemStyle: { color: '#374151' },
+        lineStyle: { color: t.dieselLine, width: 2 },
+        itemStyle: { color: t.dieselLine },
         areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(55,65,81,.06)'},{offset:1,color:'rgba(55,65,81,0)'}]) }
       },
       // 2025年92#同比参考线
@@ -1275,13 +1299,20 @@ function renderMainChart(prices, prices2025) {
     ]
   });
 
-  window.addEventListener('resize', () => chart.resize());
+  let _resizeTimer1;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer1);
+    _resizeTimer1 = setTimeout(() => { if (_mainChartInst && !_mainChartInst.isDisposed()) _mainChartInst.resize(); }, 150);
+  });
 }
 
 // ============ 柱状图 (ECharts) ============
 function renderBarChart(prices) {
+  const t = getChartTheme();
   const chartDom = document.getElementById('barChart');
-  const chart = echarts.init(chartDom);
+  if (_barChartInst) _barChartInst.dispose();
+  const chart = echarts.init(chartDom, t.dark ? 'dark' : undefined);
+  _barChartInst = chart;
   const labels = prices.map(d => formatDate(d.date));
 
   // 颜色: 红=上调, 绿=下调, 黄=搁浅
@@ -1314,7 +1345,7 @@ function renderBarChart(prices) {
     },
     legend: {
       top: 0, left: 'center',
-      textStyle: { fontSize: 12 },
+      textStyle: { fontSize: 12, color: t.axisLabel },
       itemWidth: 12, itemHeight: 12
     },
     grid: { left: 55, right: 20, top: 60, bottom: 58 },
@@ -1323,19 +1354,19 @@ function renderBarChart(prices) {
       feature: { saveAsImage: { title: '保存图片', name: '济南成品油调价幅度', pixelRatio: 2 } }
     },
     dataZoom: [
-      { type: 'slider', bottom: 8, height: 12, borderColor: 'transparent', backgroundColor: '#f1f5f9', fillerColor: 'rgba(59,130,246,.12)', handleStyle: { color: '#3b82f6' } },
+      { type: 'slider', bottom: 8, height: 12, borderColor: 'transparent', backgroundColor: t.dataZoomBg, fillerColor: t.dataZoomFill, handleStyle: { color: '#3b82f6' }, textStyle: { color: t.axisLabel } },
       { type: 'inside' }
     ],
     xAxis: {
       type: 'category', data: labels,
-      axisLabel: { color: '#6b7280', fontSize: 10, rotate: labels.length > 15 ? 45 : 0 },
+      axisLabel: { color: t.axisLabel, fontSize: 10, rotate: labels.length > 15 ? 45 : 0 },
       axisTick: { show: false },
-      axisLine: { lineStyle: { color: '#e5e7eb' } }
+      axisLine: { lineStyle: { color: t.axisLine } }
     },
     yAxis: {
       type: 'value', min: -yExtent, max: yExtent,
-      axisLabel: { formatter: '{value} 元', color: '#6b7280', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#f1f5f9' } }
+      axisLabel: { formatter: '{value} 元', color: t.axisLabel, fontSize: 11 },
+      splitLine: { lineStyle: { color: t.splitLine } }
     },
     series: [
       {
@@ -1363,11 +1394,192 @@ function renderBarChart(prices) {
     ]
   });
 
-  window.addEventListener('resize', () => chart.resize());
+  let _resizeTimer2;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer2);
+    _resizeTimer2 = setTimeout(() => { if (_barChartInst && !_barChartInst.isDisposed()) _barChartInst.resize(); }, 150);
+  });
+}
+
+// ============ 影响卡片数值填充 ============
+function updateImpactCards(prices, city) {
+  if (!prices || prices.length === 0) return;
+
+  const first = prices[0];
+  const last = prices[prices.length - 1];
+  const all92 = prices.map(p => p.p92);
+  const allDiesel = prices.map(p => p.pDiesel);
+  const peak92 = Math.max(...all92);
+  const peakDiesel = Math.max(...allDiesel);
+  const minDiesel = Math.min(...allDiesel);
+
+  // 月均油费：百公里10升 × 月行1000公里 = 100升/月
+  const MONTHLY_LITERS = 100;
+  const min92Price = Math.min(...all92);
+  const peakCost = Math.round(peak92 * MONTHLY_LITERS);
+  const peakAmp = Math.round(peak92 * MONTHLY_LITERS);
+  const currentCost = Math.round(last.p92 * MONTHLY_LITERS);
+  const ampCost = Math.round((peak92 - min92Price) * MONTHLY_LITERS);
+
+  // 柴油振幅
+  const dieselAmp = (peakDiesel - minDiesel).toFixed(2);
+  const dieselExtra400 = Math.round((peakDiesel - minDiesel) * 400);
+
+  // 网约车月均增费（全职司机月行约5000公里,百公里油耗8升）
+  const peakDiff = (peak92 - first.p92).toFixed(2);
+  const driverExtra = Math.round((peak92 - first.p92) * 50 * 8);
+
+  function setDyn(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+
+  setDyn('icPeakCost', peakCost);
+  setDyn('icCurrentCost', currentCost);
+  setDyn('icAmpCost', ampCost);
+  setDyn('icDriverCost', driverExtra > 0 ? driverExtra : (driverExtra + '~' + (driverExtra + 200)));
+  setDyn('icDieselAmp', dieselAmp);
+  setDyn('icDieselCost', dieselExtra400);
+}
+
+// ============ 时间线动态生成 ============
+function generateTimeline(prices, city) {
+  const container = document.getElementById('timelineContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  // 分组：连续同类型调价
+  const groups = [];
+  let i = 0;
+  while (i < prices.length) {
+    const type = prices[i].type;
+    if (type === 'flat') { i++; continue; }
+    let j = i + 1;
+    while (j < prices.length && prices[j].type === type) j++;
+    const group = prices.slice(i, j);
+    const start = group[0];
+    const end = group[group.length - 1];
+    const cnt = group.length;
+    const isUp = type === 'up';
+    const gasSum = group.reduce((s, p) => s + p.gas, 0);
+    const dieselSum = group.reduce((s, p) => s + p.diesel, 0);
+    const p92Diff = +(end.p92 - start.p92).toFixed(2);
+    const p95Diff = +(end.p95 - start.p95).toFixed(2);
+    const pDieselDiff = +(end.pDiesel - start.pDiesel).toFixed(2);
+
+    groups.push({ type, group, start, end, cnt, isUp, gasSum, dieselSum, p92Diff, p95Diff, pDieselDiff });
+    i = j;
+  }
+
+  // 找峰值和首降
+  const all92 = prices.map(p => p.p92);
+  const peak92 = Math.max(...all92);
+  const peakEntry = prices.find(p => p.p92 === peak92);
+  const firstDownIdx = prices.findIndex(p => p.type === 'down');
+  const firstDown = firstDownIdx >= 0 ? prices[firstDownIdx] : null;
+  const firstUpAfterDown = firstDownIdx >= 0 ? prices.slice(firstDownIdx + 1).find(p => p.type === 'up') : null;
+
+  // 累计振幅
+  const min92 = Math.min(...all92);
+  const amplitude = +(peak92 - min92).toFixed(2);
+
+  // 生成每个时间节点
+  groups.forEach((g, idx) => {
+    const delay = (idx * 0.15).toFixed(2);
+    const item = document.createElement('div');
+    item.className = 'tl-item ' + g.type + ' reveal';
+    item.style.transitionDelay = delay + 's';
+
+    // 标题
+    let title;
+    const dirLabel = g.isUp ? '涨' : '降';
+    const dirVerb = g.isUp ? '上调' : '下调';
+    const sign = g.isUp ? '+' : '';
+    if (g.cnt >= 3) {
+      title = `${g.cnt}连${dirLabel} · ${sign}${g.gasSum}元/吨`;
+    } else if (g.cnt === 2) {
+      title = `两连${dirLabel} · 合计${dirVerb}${g.gasSum}元/吨`;
+    } else {
+      title = `单次${dirVerb} · ${sign}${g.gasSum}元/吨`;
+    }
+
+    // 日期范围
+    let dateStr;
+    const startDate = new Date(g.start.date + 'T00:00:00+08:00');
+    const endDate = new Date(g.end.date + 'T00:00:00+08:00');
+    const fmtD = d => (d.getMonth() + 1) + '月' + d.getDate() + '日';
+    if (g.cnt === 1) {
+      dateStr = startDate.getFullYear() + '年' + fmtD(startDate);
+    } else {
+      dateStr = startDate.getFullYear() + '年' + fmtD(startDate) + ' — ' + fmtD(endDate);
+    }
+
+    // 峰值标记
+    let peakNote = '';
+    if (peakEntry && g.group.some(p => p.date === peakEntry.date)) {
+      peakNote = `<br><br><strong>📈 年内最高点：</strong>${city}92#达到${peak92.toFixed(2)}元/升，95# ${peakEntry.p95.toFixed(2)}元/升，98# ${peakEntry.p98.toFixed(2)}元/升。`;
+    }
+
+    // 首降标记
+    let firstDownNote = '';
+    if (firstDown && g.group.some(p => p.date === firstDown.date)) {
+      firstDownNote = `<br><br><strong>🟢 年内首次降价：</strong>打破连涨态势，92#回落至${firstDown.p92.toFixed(2)}元/升，相比峰值降${(+(peak92 - firstDown.p92).toFixed(2))}元/升。`;
+    }
+
+    // 首涨标记（降后的转折）
+    let turnNote = '';
+    if (firstUpAfterDown && g.group.some(p => p.date === firstUpAfterDown.date)) {
+      turnNote = `<br><br><strong>🔄 降后回调：</strong>油价在短暂下跌后再度上行，市场进入新一轮波动周期。`;
+    }
+
+    // 主体描述
+    let body;
+    if (g.isUp) {
+      body = `${city}92#从${g.start.p92.toFixed(2)}涨至${g.end.p92.toFixed(2)}元/升（${g.p92Diff >= 0 ? '+' : ''}${g.p92Diff}），95#从${g.start.p95.toFixed(2)}涨至${g.end.p95.toFixed(2)}元/升（${g.p95Diff >= 0 ? '+' : ''}${g.p95Diff}），0#柴油从${g.start.pDiesel.toFixed(2)}涨至${g.end.pDiesel.toFixed(2)}元/升（${g.pDieselDiff >= 0 ? '+' : ''}${g.pDieselDiff}）。`;
+      if (g.gasSum >= 500) {
+        body += `本轮段累计上调${g.gasSum}元/吨，幅度较大。`;
+      }
+      body += `以50升油箱计算，加满92#多花约${Math.round(Math.abs(g.p92Diff) * 50)}元。`;
+    } else {
+      body = `${city}92#从${g.start.p92.toFixed(2)}降至${g.end.p92.toFixed(2)}元/升（${g.p92Diff}），95#从${g.start.p95.toFixed(2)}降至${g.end.p95.toFixed(2)}元/升（${g.p95Diff}），0#柴油从${g.start.pDiesel.toFixed(2)}降至${g.end.pDiesel.toFixed(2)}元/升（${g.pDieselDiff}）。`;
+      if (Math.abs(g.gasSum) >= 500) {
+        body += `本轮段累计下调${Math.abs(g.gasSum)}元/吨，降幅显著。`;
+      }
+      body += `50升油箱加满92#可省约${Math.round(Math.abs(g.p92Diff) * 50)}元。`;
+    }
+
+    body += peakNote + firstDownNote + turnNote;
+
+    item.innerHTML = `
+      <div class="tl-dot"></div>
+      <div class="tl-date">${dateStr}</div>
+      <div class="tl-title">${title}</div>
+      <div class="tl-body">${body}</div>
+    `;
+    container.appendChild(item);
+  });
+
+  // 启动 timeline 的 reveal 观察
+  const tlObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+  container.querySelectorAll('.tl-item').forEach(el => tlObserver.observe(el));
 }
 
 // ============ 启动 ============
-init();
+// 等待 DOMContentLoaded 确保 defer 脚本（ECharts CDN）已加载就绪
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+// ============ PWA Service Worker ============
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
 </script>
 </body>
 </html>

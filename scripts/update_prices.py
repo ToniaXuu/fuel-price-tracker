@@ -292,38 +292,36 @@ def fetch_eastmoney_adjustments(last_known_date):
     return adjustments
 
 
-# ============ 数据源 3: 团友网（备用） ============
+# ============ 数据源 3: 团友网（首选：更新及时）============
 
 def fetch_tuanyou_adjustments(last_known_date):
-    """从团友网获取最新调价"""
+    """从团友网获取最新调价。页面格式: '分别降和950元/吨和915元/吨'"""
     try:
         import requests
     except ImportError:
         return []
 
-    adjustments = []
     url = "https://www.tuanyou.net/youjia/zuixin/"
 
     try:
         resp = requests.get(url, headers=HEADERS, timeout=15)
         resp.encoding = "utf-8"
     except Exception as e:
-        print(f"⚠️ 团友网请求失败: {e}")
+        print(f"  ⚠️ 团友网请求失败: {e}")
         return []
 
-    # 解析列表页: "2026年X月X日24时起国内成品油油价按机制下调0.42元/升"
-    entries = re.findall(
-        r'(\d{4})年(\d{1,2})月(\d{1,2})日24时起[^<]*?(上调|下调)[^<]*?(\d+)\s*元/吨[^<]*?(\d+)\s*元/吨',
-        resp.text
-    )
+    # 实际格式: "2026年7月3日晚上24时起，国内汽、柴油分别降和950元/吨和915元/吨"
+    pattern = r'(\d{4})年(\d{1,2})月(\d{1,2})日.*?(降|上调|提高|下调)[^\d]*?(\d+)\s*元/吨[^\d]*?(\d+)\s*元/吨'
+    entries = re.findall(pattern, resp.text)
 
+    adjustments = []
     for year, month, day, direction, gas_str, diesel_str in entries:
         date_str = f"{year}-{int(month):02d}-{int(day):02d}"
         if last_known_date and date_str <= last_known_date:
             continue
 
-        gas_amt = int(gas_str) * (-1 if "下调" in direction else 1)
-        diesel_amt = int(diesel_str) * (-1 if "下调" in direction else 1)
+        gas_amt = int(gas_str) * (-1 if "降" in direction or "下调" in direction else 1)
+        diesel_amt = int(diesel_str) * (-1 if "降" in direction or "下调" in direction else 1)
         adj_type = "down" if gas_amt < 0 else "up"
 
         print(f"  📅 {date_str}: 汽油 {gas_amt:+d}元/吨, 柴油 {diesel_amt:+d}元/吨 [{adj_type}]")
@@ -425,12 +423,13 @@ def main(dry_run=False, force=False):
                 "city": "济南",
                 "province": "山东",
                 "basePrice92": 6.67,
-                "dataSource": "国家发展和改革委员会 · 山东省发展和改革委员会"
+                "dataSource": "国家发展和改革委员会 · 团友网 · 商务部全国石油市场管理系统"
             },
-            "prices": []
+            "prices2026": []
         }
 
-    prices = existing.get("prices", [])
+    # 兼容新旧 key 名：优先 prices2026，回退 prices
+    prices = existing.get("prices2026") or existing.get("prices", [])
     last_date = get_last_date(prices)
     print(f"📋 现有记录: {len(prices)} 条，最后日期: {last_date}")
 
@@ -438,22 +437,26 @@ def main(dry_run=False, force=False):
     print("\n🔍 阶段1: 获取最新调价记录...")
     all_new = []
 
-    # 数据源1: MOFCOM（官方，最可靠）
-    print("\n  [数据源1] 商务部·全国石油市场管理系统")
-    mofcom_data = fetch_mofcom_adjustments(last_date if not force else None)
-    all_new.extend(mofcom_data)
+    # 数据源1: 团友网（更新最及时，通常当天就有）
+    print("\n  [数据源1] 团友网")
+    ty_data = fetch_tuanyou_adjustments(last_date if not force else None)
+    all_new.extend(ty_data)
 
-    # 数据源2: 东方财富（补充）
-    if not mofcom_data:
-        print("\n  [数据源2] 东方财富数据中心")
+    # 数据源2: MOFCOM 商务部（官方，但可能延迟 3-5 天）
+    print("\n  [数据源2] 商务部·全国石油市场管理系统")
+    mofcom_data = fetch_mofcom_adjustments(last_date if not force else None)
+    # 合并去重（以日期为 key，团友网数据优先）
+    existing_dates = {item[0] for item in all_new if len(item) >= 1}
+    for item in mofcom_data:
+        if item[0] not in existing_dates:
+            all_new.append(item)
+            existing_dates.add(item[0])
+
+    # 数据源3: 东方财富（备用，接口可能不稳定）
+    if not all_new:
+        print("\n  [数据源3] 东方财富数据中心")
         em_data = fetch_eastmoney_adjustments(last_date if not force else None)
         all_new.extend(em_data)
-
-    # 数据源3: 团友网（最后备用）
-    if not all_new:
-        print("\n  [数据源3] 团友网")
-        ty_data = fetch_tuanyou_adjustments(last_date if not force else None)
-        all_new.extend(ty_data)
 
     if not all_new:
         print("\n✅ 没有发现新的调价记录，数据已是最新。")
@@ -492,7 +495,7 @@ def main(dry_run=False, force=False):
     # 阶段3: 更新 data.json
     print("\n💾 阶段3: 更新 data.json...")
     prices.extend(new_entries)
-    existing["prices"] = prices
+    existing["prices2026"] = prices
     existing["meta"]["lastUpdated"] = new_entries[-1]["date"]
     existing["meta"]["year"] = datetime.strptime(new_entries[-1]["date"], "%Y-%m-%d").year
 
