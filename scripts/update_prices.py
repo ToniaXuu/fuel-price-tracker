@@ -310,8 +310,10 @@ def fetch_tuanyou_adjustments(last_known_date):
         print(f"  ⚠️ 团友网请求失败: {e}")
         return []
 
-    # 实际格式: "2026年7月3日晚上24时起，国内汽、柴油分别降和950元/吨和915元/吨"
-    pattern = r'(\d{4})年(\d{1,2})月(\d{1,2})日.*?(降|上调|提高|下调)[^\d]*?(\d+)\s*元/吨[^\d]*?(\d+)\s*元/吨'
+    # 实际格式: "2026年7月31日晚上24时起，国内汽、柴油分别上涨685元/吨和655元/吨"
+    # 或: "2026年7月3日晚上24时起，国内汽、柴油分别降和950元/吨和915元/吨"
+    # 方向词需覆盖：上涨/上调/涨、下降/下调/降/跌
+    pattern = r'(\d{4})年(\d{1,2})月(\d{1,2})日.*?(上涨|下调|下降|提高|降低|下调|下跌|上调|降|跌)[^\d]*?(\d+)\s*元/吨[^\d]*?(\d+)\s*元/吨'
     entries = re.findall(pattern, resp.text)
 
     adjustments = []
@@ -320,8 +322,10 @@ def fetch_tuanyou_adjustments(last_known_date):
         if last_known_date and date_str <= last_known_date:
             continue
 
-        gas_amt = int(gas_str) * (-1 if "降" in direction or "下调" in direction else 1)
-        diesel_amt = int(diesel_str) * (-1 if "降" in direction or "下调" in direction else 1)
+        # 方向判定：含"降/跌/低"则为降价
+        is_down = any(w in direction for w in ("降", "跌", "低"))
+        gas_amt = int(gas_str) * (-1 if is_down else 1)
+        diesel_amt = int(diesel_str) * (-1 if is_down else 1)
         adj_type = "down" if gas_amt < 0 else "up"
 
         print(f"  📅 {date_str}: 汽油 {gas_amt:+d}元/吨, 柴油 {diesel_amt:+d}元/吨 [{adj_type}]")
