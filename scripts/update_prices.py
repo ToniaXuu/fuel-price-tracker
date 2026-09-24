@@ -74,6 +74,29 @@ EASTMONEY_API = (
 # MOFCOM 列表页
 MOFCOM_LIST_URL = "https://oilsyggs.mofcom.gov.cn/oil/gzdt/page{page}.html"
 
+# ============ 数据源健康登记 ============
+# 为什么需要这张表：源失效时 fetcher 会 `return []`，调用方看到的就是「没有新记录」，
+# 任务照样绿着、通知里写「无变化」—— 数据静默停更，没有任何地方会报警。
+# 所以每个 fetcher 都必须登记自己的结果，main() 据此汇总并在源全灭时明确失败。
+SOURCE_HEALTH = {}
+
+# 健康报告落盘位置（供 send_notification.py 读取；已 .gitignore）
+HEALTH_FILE = PROJECT_ROOT / ".source_health.json"
+
+
+def mark_source(name, ok, detail=""):
+    """登记一个数据源的健康状态。"""
+    SOURCE_HEALTH[name] = {"ok": bool(ok), "detail": detail}
+
+
+def save_health():
+    """把健康状态写到磁盘，供通知脚本读取（失败不应影响主流程）。"""
+    try:
+        with open(HEALTH_FILE, "w", encoding="utf-8") as f:
+            json.dump(SOURCE_HEALTH, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"  ⚠️ 健康状态落盘失败: {e}")
+
 
 # ============ 工具函数 ============
 
@@ -125,14 +148,17 @@ def fetch_mofcom_adjustments(last_known_date):
         import requests
     except ImportError:
         print("⚠️ 需要安装 requests 库: pip install requests")
+        mark_source("商务部", False, "缺少 requests 库")
         return []
 
     adjustments = []
+    fetched_ok = False
     for page in range(1, 4):  # 最多查3页
         url = MOFCOM_LIST_URL.format(page=page)
         try:
             resp = requests.get(url, headers=HEADERS, timeout=15)
             resp.encoding = "utf-8"
+            fetched_ok = True
         except Exception as e:
             print(f"⚠️ MOFCOM 第{page}页请求失败: {e}")
             break
@@ -152,12 +178,17 @@ def fetch_mofcom_adjustments(last_known_date):
                 continue
 
             # 判断类型
-            if "上调" in title or "涨" in title:
+            # 搁浅公告的标题不含涨跌方向词，必须单独识别；
+            # 早先这里对「无方向词」的兜底是 `adj_type = "up"`，会把搁浅记成上涨。
+            if "不作调整" in title or "搁浅" in title:
+                adj_type = "flat"
+            elif "上调" in title or "涨" in title:
                 adj_type = "up"
             elif "下调" in title or "降" in title or "下跌" in title:
                 adj_type = "down"
             else:
-                adj_type = "up"  # 默认，需从详情页确认
+                print(f"  ⚠️ {date_str}: 标题未含涨跌方向，跳过（需人工确认） ({title})")
+                continue
 
             # 获取详情页
             detail_url = f"https://oilsyggs.mofcom.gov.cn{href}"
@@ -187,6 +218,12 @@ def fetch_mofcom_adjustments(last_known_date):
         if not has_new:
             break
 
+    # 至少有一页成功拿到（哪怕没有新数据）才算这个源可用
+    mark_source(
+        "商务部",
+        fetched_ok,
+        f"页面可访问，解析 {len(adjustments)} 条新记录" if fetched_ok else "不可用（见上方告警）",
+    )
     return adjustments
 
 
@@ -233,6 +270,7 @@ def fetch_eastmoney_adjustments(last_known_date):
     try:
         import requests
     except ImportError:
+        mark_source("东方财富", False, "缺少 requests 库")
         return []
 
     try:
@@ -240,6 +278,7 @@ def fetch_eastmoney_adjustments(last_known_date):
         data = resp.json()
     except Exception as e:
         print(f"⚠️ 东方财富 API 请求失败: {e}")
+        mark_source("东方财富", False, f"请求失败: {str(e)[:100]}")
         return []
 
     if not data.get("success") or not data.get("result"):
@@ -258,10 +297,16 @@ def fetch_eastmoney_adjustments(last_known_date):
         try:
             resp2 = requests.get(alt_api, headers=HEADERS, timeout=15)
             data = resp2.json()
-        except Exception:
+        except Exception as e:
+            print(f"⚠️ 东方财富 备用接口也失败: {e}")
+            mark_source("东方财富", False, f"主/备用接口请求均失败: {str(e)[:80]}")
             return []
 
     if not data.get("success") or not data.get("result"):
+        # 原来的写法是「静默 return []」——调用方只看得到「没有新记录」，
+        # 于是这个源挂掉了也永远不报警。这里必须把失败喊出来。
+        print(f"⚠️ 东方财富接口返回 success={data.get('success')}，无可解析数据")
+        mark_source("东方财富", False, f"接口返回 success={data.get('success')}（接口可能已下线）")
         return []
 
     adjustments = []
@@ -277,11 +322,12 @@ def fetch_eastmoney_adjustments(last_known_date):
         gas_change = rec.get("GASOLINE_CHANGE") or rec.get("GAS_CHANGE") or 0
         diesel_change = rec.get("DIESEL_CHANGE") or 0
 
-        # 尝试从其他字段推断
+        # 变动为 0 = 搁浅。既然这条记录有日期（无日期的早在上面就 continue 了），
+        # 「有轮次但没幅度」就只可能是搁浅，应记成 flat 而不是丢掉 —— 丢掉会让时间轴少一轮。
+        # 原来这里直接 `continue`，是一条静默的数据保真缺口。
         if gas_change == 0 and diesel_change == 0:
-            # 检查是否有其他格式的数据
-            gas_price = rec.get("GASOLINE_PRICE") or rec.get("GAS_PRICE") or 0
-            # 如果有价格但没有变动，可能是搁浅
+            print(f"  📅 {date_str}: 搁浅（变动为 0）")
+            adjustments.append((date_str, "flat", 0, 0))
             continue
 
         adj_type = "up" if gas_change > 0 else "down" if gas_change < 0 else "flat"
@@ -289,16 +335,26 @@ def fetch_eastmoney_adjustments(last_known_date):
         print(f"  📅 {date_str}: 汽油 {gas_change:+d}元/吨, 柴油 {diesel_change:+d}元/吨 [{adj_type}]")
         adjustments.append((date_str, adj_type, int(gas_change), int(diesel_change)))
 
+    mark_source("东方财富", True, f"接口正常，返回 {len(records)} 条、新记录 {len(adjustments)} 条")
     return adjustments
 
 
 # ============ 数据源 3: 团友网（首选：更新及时）============
 
 def fetch_tuanyou_adjustments(last_known_date):
-    """从团友网获取最新调价。页面格式: '分别降和950元/吨和915元/吨'"""
+    """从团友网获取最新调价。
+
+    这个页面有两处互补的信息，缺一不可：
+      ① 新闻摘要（class="date"）: "2026年9月11日晚上24时起，国内汽、柴油分别上涨260元/吨和250元/吨"
+         —— 只覆盖最新 1~2 条，提供「元/吨」明细
+      ② 页面标题（title 属性）: "2026年1月6日国内成品油价格按机制不作调整"
+         —— 覆盖全量轮次，**且搁浅轮次只在这里出现**（摘要里根本没有）
+    所以：幅度走 ①，搁浅与「页面到底更新到哪天」的哨兵走 ②。
+    """
     try:
         import requests
     except ImportError:
+        mark_source("团友网", False, "缺少 requests 库")
         return []
 
     url = "https://www.tuanyou.net/youjia/zuixin/"
@@ -308,15 +364,25 @@ def fetch_tuanyou_adjustments(last_known_date):
         resp.encoding = "utf-8"
     except Exception as e:
         print(f"  ⚠️ 团友网请求失败: {e}")
+        mark_source("团友网", False, f"请求失败: {str(e)[:100]}")
         return []
 
+    html = resp.text
+    adjustments = []
+
+    # 页面标题里出现的所有日期 —— 与具体幅度格式无关，是最稳的「更新到哪天」信号
+    all_dates = [
+        f"{y}-{int(m):02d}-{int(d):02d}"
+        for y, m, d in re.findall(r"(\d{4})年(\d{1,2})月(\d{1,2})日", html)
+    ]
+    newest_on_page = max(all_dates) if all_dates else None
+
+    # --- ① 元/吨 幅度（新闻摘要）---
     # 实际格式: "2026年7月31日晚上24时起，国内汽、柴油分别上涨685元/吨和655元/吨"
-    # 或: "2026年7月3日晚上24时起，国内汽、柴油分别降和950元/吨和915元/吨"
     # 方向词需覆盖：上涨/上调/涨、下降/下调/降/跌
     pattern = r'(\d{4})年(\d{1,2})月(\d{1,2})日.*?(上涨|下调|下降|提高|降低|下调|下跌|上调|降|跌)[^\d]*?(\d+)\s*元/吨[^\d]*?(\d+)\s*元/吨'
-    entries = re.findall(pattern, resp.text)
+    entries = re.findall(pattern, html)
 
-    adjustments = []
     for year, month, day, direction, gas_str, diesel_str in entries:
         date_str = f"{year}-{int(month):02d}-{int(day):02d}"
         if last_known_date and date_str <= last_known_date:
@@ -330,6 +396,34 @@ def fetch_tuanyou_adjustments(last_known_date):
 
         print(f"  📅 {date_str}: 汽油 {gas_amt:+d}元/吨, 柴油 {diesel_amt:+d}元/吨 [{adj_type}]")
         adjustments.append((date_str, adj_type, gas_amt, diesel_amt))
+
+    # --- ② 搁浅轮次（标题里的「不作调整」）---
+    # 摘要只讲涨跌，搁浅必须单独捞；否则时间轴会凭空多出一个更长的间隔。
+    flat_re = re.compile(r"(\d{4})年(\d{1,2})月(\d{1,2})日[^\"<]*?不作调整")
+    for year, month, day in flat_re.findall(html):
+        date_str = f"{year}-{int(month):02d}-{int(day):02d}"
+        if last_known_date and date_str <= last_known_date:
+            continue
+        print(f"  📅 {date_str}: 搁浅（不作调整）")
+        adjustments.append((date_str, "flat", 0, 0))
+
+    # --- 健康哨兵 ---
+    # 页面一旦改版，上面两个正则可能一条都匹配不到，而调用方只会看到「没有新记录」，
+    # 于是任务绿着、通知写「无变化」，数据静默停更。用「页面上最新日期」当哨兵堵住它。
+    if newest_on_page is None:
+        mark_source("团友网", False, "页面已抓取但未匹配到任何调价日期（页面结构可能已变）")
+    elif last_known_date and newest_on_page > last_known_date:
+        if any(r[0] == newest_on_page for r in adjustments):
+            mark_source("团友网", True, f"页面最新 {newest_on_page}，已成功解析")
+        else:
+            mark_source(
+                "团友网",
+                False,
+                f"页面最新日期已是 {newest_on_page}（比库里的 {last_known_date} 新），"
+                f"但没解析出任何幅度/搁浅 —— 解析规则可能已失效",
+            )
+    else:
+        mark_source("团友网", True, f"页面最新 {newest_on_page}，无更新")
 
     return adjustments
 
@@ -462,8 +556,26 @@ def main(dry_run=False, force=False):
         em_data = fetch_eastmoney_adjustments(last_date if not force else None)
         all_new.extend(em_data)
 
+    # ---- 数据源健康汇总 ----
+    # 这一段是本次改造的重点：源失效时 fetcher 只会 `return []`，
+    # 调用方看到的和「真的没有新数据」一模一样，于是数据停更也没有任何人会知道。
+    print("\n🩺 数据源健康:")
+    for name, st in SOURCE_HEALTH.items():
+        print(f"  {'✅' if st['ok'] else '❌'} {name}: {st['detail']}")
+    healthy = [n for n, st in SOURCE_HEALTH.items() if st["ok"]]
+
     if not all_new:
-        print("\n✅ 没有发现新的调价记录，数据已是最新。")
+        if healthy:
+            print("\n✅ 没有发现新的调价记录，数据已是最新。")
+            if not dry_run:
+                save_health()
+        else:
+            # 一个源都没通 → 这句「已是最新」是站不住的，必须明确失败，
+            # 让 Actions 变红（GitHub 会给仓库主人发失败邮件）。
+            print("\n❌ 无法确认数据是否最新 —— 所有尝试的数据源均不可用（见上方健康汇总）！")
+            if not dry_run:
+                save_health()
+                sys.exit(1)
         return
 
     # 去重和排序
@@ -504,6 +616,7 @@ def main(dry_run=False, force=False):
     existing["meta"]["year"] = datetime.strptime(new_entries[-1]["date"], "%Y-%m-%d").year
 
     save_data(existing)
+    save_health()
 
     print(f"\n🎉 更新完成! 新增 {len(new_entries)} 条记录，共 {len(prices)} 条。")
 

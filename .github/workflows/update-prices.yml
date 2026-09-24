@@ -52,6 +52,9 @@ jobs:
           git push
 
       - name: 发送每日通知（微信+钉钉）
+        # always()：更新脚本若因「所有数据源不可用」而失败退出，默认会跳过后续步骤，
+        # 告警就送不出去了。这里保证通知照发，并把数据源故障一并带上。
+        if: always()
         env:
           SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
           DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}

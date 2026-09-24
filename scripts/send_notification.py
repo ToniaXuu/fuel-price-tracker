@@ -23,6 +23,7 @@ except ImportError:
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 DATA_FILE = PROJECT_ROOT / "data.json"
+HEALTH_FILE = PROJECT_ROOT / ".source_health.json"
 PAGE_URL = "https://ToniaXuu.github.io/fuel-price-tracker/"
 TANK_SIZE = 50
 LAT, LON, TZ = 36.65, 117.00, "Asia/Shanghai"
@@ -31,6 +32,35 @@ LAT, LON, TZ = 36.65, 117.00, "Asia/Shanghai"
 def load_data():
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def health_warning():
+    """读取 update_prices.py 留下的数据源健康报告，有源不可用时返回告警文案。
+
+    存在的意义：源失效时爬虫只会输出「没有新记录」，通知里照样风平浪静地写
+    「无变化」—— 数据静默停更很久都不会有人发现。这里把故障主动顶进通知。
+    """
+    try:
+        with open(HEALTH_FILE, "r", encoding="utf-8") as f:
+            health = json.load(f)
+    except Exception:
+        return ""
+
+    if not health:
+        return ""
+
+    bad = {n: v for n, v in health.items() if not v.get("ok")}
+    if not bad:
+        return ""
+
+    lines = "\n".join(
+        f"- ❌ **{n}**：{v.get('detail', '不可用')}" for n, v in bad.items()
+    )
+    if len(bad) == len(health):
+        head = "🚨 **全部数据源不可用 —— 数据可能已停止更新**"
+    else:
+        head = "⚠️ **数据源异常（其余源仍正常，数据未受影响）**"
+    return f"\n\n---\n\n{head}\n\n{lines}"
 
 
 def fetch_weather():
@@ -222,6 +252,11 @@ def main():
 
     print("📝 构建消息...")
     title, body = build_msg(prices, has_change, weather)
+
+    warn = health_warning()
+    if warn:
+        print("⚠️ 检测到数据源异常，已附加告警")
+        body += warn
 
     if os.environ.get("SERVERCHAN_SENDKEY"):
         print(f"📤 [微信] {title}")

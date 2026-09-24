@@ -1,1 +1,8 @@
 .workbuddy/
+
+# 爬虫数据源健康报告（update_prices.py 运行时生成，不入库）
+.source_health.json
+
+# Python 编译缓存
+__pycache__/
+*.pyc
