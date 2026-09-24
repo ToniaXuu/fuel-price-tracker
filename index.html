@@ -12,7 +12,20 @@
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" href="./favicon.png" type="image/png" />
   <link rel="manifest" href="./manifest.json" />
-  <meta name="theme-color" content="#3b82f6" />
+  <meta name="theme-color" content="#0a0f1e" />
+  <meta name="color-scheme" content="dark light" />
+  <script>
+    /* 主题预置：在任何绘制前落盘 data-theme，避免闪白/闪黑。
+       优先级：URL ?theme= > localStorage > 跟随系统 */
+    (function () {
+      try {
+        var q = new URLSearchParams(location.search).get('theme');
+        var saved = q || localStorage.getItem('fpt-theme') || 'auto';
+        if (['light', 'dark', 'auto'].indexOf(saved) < 0) saved = 'auto';
+        if (saved !== 'auto') document.documentElement.setAttribute('data-theme', saved);
+      } catch (e) { /* 隐私模式忽略 */ }
+    })();
+  </script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -37,28 +50,99 @@
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
   <style>
+    /* ================================================================
+       设计令牌层 —— 所有颜色/尺寸只在此处定义，组件样式一律引用变量。
+       暗色覆盖见文件末尾 DARK THEME 与 PRINT 两节。
+       ================================================================ */
     :root {
+      color-scheme: light;
+
+      /* ---- 基础面 ---- */
       --bg: #f0f2f7;
       --card: #ffffff;
       --border: #e4e7ee;
       --text: #1a1d28;
       --sub: #6b7280;
+
+      /* ---- 品牌 ---- */
       --blue: #3b82f6;
-      --blue-light: #dbeafe;
+      --blue-strong: #2563eb;
+      --purple: #8b5cf6;
+      --brand-gradient: linear-gradient(90deg, var(--blue), var(--purple));
+      --brand-gradient-135: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      --brand-gradient-text: linear-gradient(135deg, #60a5fa, #a78bfa);
+
+      /* ---- 语义填充（涨红跌绿）---- */
       --red: #ef4444;
       --red-light: #fecaca;
       --green: #10b981;
       --green-light: #d1fae5;
       --amber: #f59e0b;
       --amber-light: #fef3c7;
-      --purple: #8b5cf6;
-      --slate: #374151;
+
+      /* ---- 语义文字（保证 4.5:1 对比度）---- */
+      --up-text: #dc2626;
+      --down-text: #047857;
+      --flat-text: #b45309;
+      --accent-text: #2563eb;
+      --flat-fg: #92400e;
+
+      /* ---- 数据系列色（图表 + 价格卡边框同源；--ser-diesel 兼作中性强调色）---- */
+      --ser-92: #3b82f6;
+      --ser-95: #8b5cf6;
+      --ser-98: #0d9488;
+      --ser-diesel: #475569;
+      --ser-yoy: #94a3b8;
+
+      /* ---- 结构性表面 ---- */
+      --th-bg: #f8fafc;
+      --row-border: #f1f5f9;
+      --row-hover: #f8faff;
+      --scroll-thumb: #cbd5e1;
+      --sk-1: #e5e7eb;
+      --sk-2: #f3f4f6;
+      --dot-ring: #ffffff;
+      --tl-line-a: #3b82f6;
+      --tl-line-b: #e4e7ee;
+      --callout-bg: linear-gradient(135deg, #eff6ff, #f5f3ff);
+      --callout-border: #c7d2fe;
+
+      /* ---- Hero 与 Footer（恒定深底，不随主题翻转）---- */
+      --hero-bg: linear-gradient(135deg, #0a0f1e 0%, #111d38 30%, #15204a 60%, #0f2744 100%);
+      --hero-solid: #0a0f1e;
+      --hero-up: #f87171;
+      --hero-down: #4ade80;
+      --hero-amber: #fbbf24;
+      --hero-text: rgba(255,255,255,.62);
+      --hero-text-dim: rgba(255,255,255,.55);
+      --footer-text: rgba(255,255,255,.6);
+
+      /* ---- 悬浮控件（固定压在半透明深底上，两主题共用一套亮色）---- */
+      --toggle-bg: rgba(15,23,42,.55);
+      --toggle-bg-hover: rgba(15,23,42,.78);
+      --toggle-border: rgba(255,255,255,.3);
+      --toggle-fg: #ffffff;
+
+      /* ---- 阴影 / 圆角 / 动效 ---- */
       --shadow-sm: 0 1px 3px rgba(0,0,0,.06);
       --shadow: 0 4px 24px rgba(0,0,0,.08);
       --shadow-lg: 0 12px 40px rgba(0,0,0,.12);
       --radius: 18px;
       --radius-sm: 10px;
       --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+      /* ---- 图表（由 JS 读取，CSS 是唯一真源）---- */
+      --chart-axis-label: #6b7280;
+      --chart-axis-line: #e5e7eb;
+      --chart-split-line: #f1f5f9;
+      --chart-zoom-bg: #f1f5f9;
+      --chart-zoom-fill: rgba(59,130,246,.15);
+      --chart-area-from: rgba(59,130,246,.14);
+      --chart-area-to: rgba(59,130,246,0);
+      --chart-tooltip-bg: rgba(15,23,42,.94);
+      --chart-tooltip-border: transparent;
+      --chart-tooltip-fg: #ffffff;
+      --chart-icon: #6b7280;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -74,12 +158,12 @@
     /* ===== SCROLLBAR ===== */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 3px; }
 
     /* ===== PROGRESS BAR ===== */
     .progress-bar {
       position: fixed; top: 0; left: 0; height: 3px;
-      background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+      background: var(--brand-gradient);
       z-index: 9999;
       transition: width .15s linear;
       border-radius: 0 2px 2px 0;
@@ -104,7 +188,7 @@
     /* ===== HERO ===== */
     .hero {
       position: relative;
-      background: linear-gradient(135deg, #0a0f1e 0%, #111d38 30%, #15204a 60%, #0f2744 100%);
+      background: var(--hero-bg);
       padding: 80px 20px 70px;
       overflow: hidden;
       min-height: 520px;
@@ -128,7 +212,7 @@
       position: absolute; bottom: -28px; border-radius: 50% 50% 50% 0;
       transform: rotate(-45deg); opacity: 0.15; pointer-events: none;
       animation: dropBounce 3s ease-in-out infinite;
-      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      background: var(--brand-gradient-135);
     }
     .hero-oil-drop:nth-child(1) { left: 8%; animation-delay: 0s; }
     .hero-oil-drop:nth-child(2) { left: 28%; animation-delay: 0.7s; }
@@ -162,12 +246,12 @@
     .hero-badge .dot {
       width: 7px; height: 7px;
       border-radius: 50%;
-      background: #10b981;
+      background: var(--green);
       animation: pulse-dot 2s ease-in-out infinite;
     }
     @keyframes pulse-dot {
-      0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,.6); }
-      50%     { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+      0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 60%, transparent); }
+      50%     { box-shadow: 0 0 0 8px color-mix(in srgb, var(--green) 0%, transparent); }
     }
     .hero h1 {
       font-size: clamp(28px, 5vw, 52px);
@@ -179,14 +263,14 @@
       animation: fadeInUp .7s .1s ease-out both;
     }
     .hero h1 .city {
-      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      background: var(--brand-gradient-text);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
     .hero p {
       font-size: 16px;
-      color: rgba(255,255,255,.6);
+      color: var(--hero-text);
       max-width: 580px;
       margin: 0 auto 36px;
       animation: fadeInUp .7s .2s ease-out both;
@@ -219,35 +303,71 @@
       font-size: 30px; font-weight: 800;
       color: #fff;
       line-height: 1;
+      font-variant-numeric: tabular-nums;
     }
+    .hero-stat .val.is-up    { color: var(--hero-up); }
+    .hero-stat .val.is-down  { color: var(--hero-down); }
+    .hero-stat .val.is-amber { color: var(--hero-amber); }
     .hero-stat .lab {
-      font-size: 12px; color: rgba(255,255,255,.5);
+      font-size: 12px; color: var(--hero-text-dim);
       margin-top: 6px;
     }
 
     /* ===== CONTAINER ===== */
     .container { max-width: 1140px; margin: 0 auto; padding: 48px 20px 80px; position: relative; z-index: 1; }
 
-    /* ===== RESPONSIVE FONTS ===== */
-    @media (max-width: 640px) {
-      .price-cell .p-value { font-size: 22px; }
-      .qstat .value { font-size: 26px; }
-      .section-title { font-size: 16px; }
+    /* ===== ICON SYSTEM（内联 SVG，继承 currentColor）===== */
+    .ic {
+      width: 20px; height: 20px; flex: 0 0 auto;
+      fill: none; stroke: currentColor;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+      color: var(--blue);
     }
+    .ic-sm { width: 16px; height: 16px; }
+    .ic-lg { width: 24px; height: 24px; }
 
     /* ===== SECTION TITLE ===== */
     .section-title {
       font-size: 22px; font-weight: 700; color: var(--text);
       margin-bottom: 22px;
-      display: flex; align-items: center; gap: 12px;
+      display: flex; align-items: center; gap: 10px;
+      letter-spacing: -.01em;
     }
-    .section-title::before {
-      content: '';
-      display: block;
-      width: 4px; height: 24px;
-      background: linear-gradient(180deg, var(--blue), var(--purple));
-      border-radius: 2px;
+    .section-title .ic { color: var(--blue); }
+
+    /* ---- 当前油价标题行 ---- */
+    .price-head {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+      margin-bottom: 16px;
     }
+    .price-head .section-title { margin-bottom: 0; }
+    .trend-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      white-space: nowrap;
+      background: var(--row-hover);
+      color: var(--sub);
+    }
+    .trend-badge.up   { background: var(--red-light);   color: var(--up-text); }
+    .trend-badge.down { background: var(--green-light); color: var(--down-text); }
+    .trend-badge.flat { background: var(--amber-light); color: var(--flat-fg); }
+    .btn-retry {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--blue); color: #fff;
+      border: none; border-radius: 999px;
+      padding: 4px 14px; font-size: 12px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      margin-left: 6px;
+      transition: background .2s;
+    }
+    .btn-retry:hover { background: var(--blue-strong); }
+    .btn-retry .ic { width: 14px; height: 14px; color: #fff; }
+    .btn-retry[disabled] { opacity: .7; cursor: default; }
 
     /* ===== CARD ===== */
     .card {
@@ -276,9 +396,14 @@
     /* ===== QUICK STATS ===== */
     .quick-stats {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      /* 恰好 5 张卡：auto-fit 在中等宽度会退化到 4 列，第 5 张单独甩到第二行、
+         只占 1/4 宽度，非常空。所以宽屏固定 5 列，中等宽度直接降到 3 列（3+2）。 */
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 16px;
       margin-bottom: 32px;
+    }
+    @media (max-width: 1100px) {
+      .quick-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     .qstat {
       background: var(--card);
@@ -302,10 +427,11 @@
     .qstat .value {
       font-size: 32px; font-weight: 800; line-height: 1.1;
       transition: color .5s;
+      font-variant-numeric: tabular-nums;
     }
-    .qstat.up .value   { color: var(--red); }
-    .qstat.down .value { color: var(--green); }
-    .qstat.neutral .value { color: var(--slate); }
+    .qstat.up .value   { color: var(--up-text); }
+    .qstat.down .value { color: var(--down-text); }
+    .qstat.neutral .value { color: var(--text); }
     .qstat .unit { font-size: 13px; font-weight: 400; color: var(--sub); margin-left: 2px; }
     .qstat .suffix { font-size: 12px; color: var(--sub); margin-top: 4px; }
 
@@ -316,7 +442,7 @@
       gap: 16px;
       margin-bottom: 8px;
     }
-    @media (max-width: 680px) { .price-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) { .price-grid { grid-template-columns: repeat(2, 1fr); } }
     .price-cell {
       background: var(--bg);
       border-radius: 14px;
@@ -327,27 +453,35 @@
     }
     .price-cell:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
     .price-cell .p-label { font-size: 11px; color: var(--sub); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
-    .price-cell .p-value { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; }
-    .price-cell .p-change { font-size: 12px; font-weight: 600; }
-    .price-cell .p-change.up   { color: var(--red); }
-    .price-cell .p-change.down { color: var(--green); }
-    .price-cell:nth-child(1) { border-top: 3px solid var(--blue); }
-    .price-cell:nth-child(2) { border-top: 3px solid var(--purple); }
-    .price-cell:nth-child(3) { border-top: 3px solid var(--red); }
-    .price-cell:nth-child(4) { border-top: 3px solid var(--slate); }
+    .price-cell .p-value { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+    .price-cell .p-change { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .price-cell .p-change.up   { color: var(--up-text); }
+    .price-cell .p-change.down { color: var(--down-text); }
+    .price-cell:nth-child(1) { border-top: 3px solid var(--ser-92);     transition-delay: 0s; }
+    .price-cell:nth-child(2) { border-top: 3px solid var(--ser-95);     transition-delay: .1s; }
+    .price-cell:nth-child(3) { border-top: 3px solid var(--ser-98);     transition-delay: .2s; }
+    .price-cell:nth-child(4) { border-top: 3px solid var(--ser-diesel); transition-delay: .3s; }
 
     /* ===== CHART AREA ===== */
     .chart-wrap { position: relative; height: 480px; }
-    @media (max-width: 640px) { .chart-wrap { height: 360px; } }
+    @media (max-width: 768px) { .chart-wrap { height: 380px; } }
+
+    /* 柱状图自定义图例：颜色表达涨跌，宽度区分油品 */
+    .chart-legend {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px;
+      margin: -4px 0 14px;
+      font-size: 12px; color: var(--sub);
+    }
+    .chart-legend .lg { display: inline-flex; align-items: center; gap: 6px; }
+    .chart-legend .sw { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+    .chart-legend .sw-up   { background: var(--red); }
+    .chart-legend .sw-down { background: var(--green); }
+    .chart-legend .sw-flat { background: var(--sub); }
+    .chart-legend .lg-hint { opacity: .8; }
 
     /* ===== TABLE ===== */
-    /* ===== RESPONSIVE TABLE ===== */
     .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    @media (max-width: 768px) {
-      .data-table { font-size: 12px; }
-      .data-table thead th,
-      .data-table tbody td { padding: 8px 6px; white-space: nowrap; }
-    }
+    .th-sub { display: block; margin-top: 2px; font-size: 11px; font-weight: 400; opacity: .75; }
 
     /* ===== SKELETON SHIMMER ===== */
     @keyframes shimmer {
@@ -355,24 +489,17 @@
       100% { background-position: 200% 0; }
     }
     .skeleton {
-      background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+      background: linear-gradient(90deg, var(--sk-1) 25%, var(--sk-2) 50%, var(--sk-1) 75%);
       background-size: 200% 100%;
       animation: shimmer 1.5s ease-in-out infinite;
       border-radius: 6px;
       color: transparent !important;
     }
-    .skeleton-val {
-      display: inline-block; min-width: 60px; height: 28px;
-      background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s ease-in-out infinite;
-      border-radius: 6px;
-    }
     .data-table {
       width: 100%; border-collapse: collapse; font-size: 14px;
     }
     .data-table thead th {
-      background: #f8fafc;
+      background: var(--th-bg);
       color: var(--sub);
       font-weight: 600;
       text-align: left;
@@ -382,9 +509,9 @@
       font-size: 12px;
       letter-spacing: .03em;
     }
-    .data-table tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .2s; }
-    .data-table tbody tr:hover { background: #f8faff; }
-    .data-table tbody td { padding: 11px 14px; }
+    .data-table tbody tr { border-bottom: 1px solid var(--row-border); transition: background .2s; }
+    .data-table tbody tr:hover { background: var(--row-hover); }
+    .data-table tbody td { padding: 11px 14px; font-variant-numeric: tabular-nums; }
     .badge {
       display: inline-block;
       padding: 3px 12px;
@@ -392,10 +519,11 @@
       font-size: 11px;
       font-weight: 700;
       letter-spacing: .04em;
+      white-space: nowrap;
     }
     .badge.up   { background: var(--red-light);  color: var(--red); }
     .badge.down { background: var(--green-light); color: var(--green); }
-    .badge.flat { background: var(--amber-light); color: #92400e; }
+    .badge.flat { background: var(--amber-light); color: var(--flat-fg); }
 
     /* ===== TIMELINE ===== */
     .timeline { position: relative; padding-left: 32px; }
@@ -403,7 +531,7 @@
       content: '';
       position: absolute; left: 10px; top: 0; bottom: 0;
       width: 2px;
-      background: linear-gradient(to bottom, var(--blue), var(--purple), var(--red), var(--green));
+      background: linear-gradient(to bottom, var(--tl-line-a), var(--tl-line-b));
       border-radius: 1px;
     }
     .tl-item {
@@ -415,20 +543,20 @@
     .tl-dot {
       position: absolute; left: -28px; top: 4px;
       width: 16px; height: 16px; border-radius: 50%;
-      border: 3px solid #fff;
-      box-shadow: 0 0 0 3px var(--blue), 0 0 8px rgba(59,130,246,.4);
+      border: 3px solid var(--dot-ring);
+      box-shadow: 0 0 0 3px var(--blue), 0 0 8px color-mix(in srgb, var(--blue) 40%, transparent);
       background: var(--blue);
       transition: transform .3s;
     }
     .tl-item:hover .tl-dot { transform: scale(1.3); }
-    .tl-item.up .tl-dot   { box-shadow: 0 0 0 3px var(--red),    0 0 8px rgba(239,68,68,.4);  background: var(--red); }
-    .tl-item.down .tl-dot { box-shadow: 0 0 0 3px var(--green),  0 0 8px rgba(16,185,129,.4); background: var(--green); }
-    .tl-item.flat .tl-dot { box-shadow: 0 0 0 3px var(--amber),  0 0 8px rgba(245,158,11,.4); background: var(--amber); }
+    .tl-item.up .tl-dot   { box-shadow: 0 0 0 3px var(--red),    0 0 8px color-mix(in srgb, var(--red) 40%, transparent);   background: var(--red); }
+    .tl-item.down .tl-dot { box-shadow: 0 0 0 3px var(--green),  0 0 8px color-mix(in srgb, var(--green) 40%, transparent); background: var(--green); }
+    .tl-item.flat .tl-dot { box-shadow: 0 0 0 3px var(--amber),  0 0 8px color-mix(in srgb, var(--amber) 40%, transparent); background: var(--amber); }
     .tl-date { font-size: 11px; color: var(--sub); margin-bottom: 4px; letter-spacing: .04em; }
     .tl-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-    .tl-item.up .tl-title   { color: var(--red); }
-    .tl-item.down .tl-title { color: var(--green); }
-    .tl-item.flat .tl-title { color: var(--amber); }
+    .tl-item.up .tl-title   { color: var(--up-text); }
+    .tl-item.down .tl-title { color: var(--down-text); }
+    .tl-item.flat .tl-title { color: var(--flat-text); }
     .tl-body { font-size: 13px; color: var(--sub); line-height: 1.75; }
 
     /* ===== IMPACT GRID ===== */
@@ -438,6 +566,7 @@
       gap: 20px;
     }
     .impact-card {
+      --ic-accent: var(--ser-diesel);
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -450,48 +579,120 @@
     .impact-card::before {
       content: '';
       position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+      background: var(--ic-accent);
       transition: var(--transition);
     }
     .impact-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
     .impact-card:hover::before { width: 6px; }
-    .impact-card.n1::before { background: var(--red); }
-    .impact-card.n2::before { background: var(--amber); }
-    .impact-card.n3::before { background: var(--green); }
-    .impact-card.n4::before { background: var(--blue); }
-    .impact-card.n5::before { background: var(--purple); }
-    .impact-card.n6::before { background: var(--slate); }
-    .ic-icon { font-size: 30px; margin-bottom: 10px; }
+    .impact-card.n1 { --ic-accent: var(--red); }
+    .impact-card.n2 { --ic-accent: var(--amber); }
+    .impact-card.n3 { --ic-accent: var(--green); }
+    .impact-card.n4 { --ic-accent: var(--blue); }
+    .impact-card.n5 { --ic-accent: var(--purple); }
+    .impact-card.n6 { --ic-accent: var(--ser-diesel); }
+    .ic-icon {
+      width: 42px; height: 42px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      color: var(--ic-accent);
+      background: color-mix(in srgb, var(--ic-accent) 12%, transparent);
+    }
+    .ic-icon .ic { width: 22px; height: 22px; color: inherit; }
     .ic-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
     .ic-body { font-size: 13px; color: var(--sub); line-height: 1.75; }
 
     /* ===== CALL-OUT BOX ===== */
     .callout {
-      background: linear-gradient(135deg, #eff6ff, #f5f3ff);
-      border: 1px solid #c7d2fe;
+      background: var(--callout-bg);
+      border: 1px solid var(--callout-border);
       border-radius: var(--radius);
       padding: 24px 28px;
       display: flex; align-items: flex-start; gap: 16px;
       margin-bottom: 28px;
     }
-    .callout-icon { font-size: 28px; flex-shrink: 0; }
+    .callout-icon {
+      width: 36px; height: 36px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 10px;
+      color: var(--accent-text);
+      background: color-mix(in srgb, var(--blue) 14%, transparent);
+    }
+    .callout-icon .ic { width: 20px; height: 20px; color: inherit; }
     .callout-text { font-size: 14px; line-height: 1.75; }
-    .callout-text strong { color: var(--blue); }
+    .callout-text strong { color: var(--accent-text); }
 
     /* ===== FOOTER ===== */
     footer {
-      background: #0a0f1e;
-      color: rgba(255,255,255,.45);
+      background: var(--hero-solid);
+      color: var(--footer-text);
       text-align: center;
       padding: 28px;
       font-size: 12px;
     }
-    footer a { color: rgba(255,255,255,.55); text-decoration: none; }
-    footer a:hover { color: var(--blue); }
+    footer a { color: rgba(255,255,255,.72); text-decoration: none; }
+    footer a:hover { color: #93c5fd; }
+    footer .ic { color: inherit; vertical-align: -3px; margin-right: 3px; }
 
-    /* ===== TOOLTIP ENHANCEMENT ===== */
-    .tooltip-row { margin-top: 8px; display: none; }
-    .tooltip-row.show { display: block; }
+    /* ===== THEME SWITCH（三选一分段控件：点哪个应用哪个）===== */
+    .theme-switch {
+      position: fixed; top: 16px; right: 16px; z-index: 1000;
+      display: flex; align-items: center; gap: 2px;
+      padding: 3px;
+      border-radius: 999px;
+      background: var(--toggle-bg);
+      border: 1px solid var(--toggle-border);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+    }
+    .ts-btn {
+      width: 30px; height: 30px; flex: 0 0 auto;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0; border: none; border-radius: 999px;
+      background: transparent; color: var(--toggle-fg);
+      opacity: .6; cursor: pointer;
+      transition: background .22s, color .22s, opacity .22s, transform .18s;
+    }
+    .ts-btn .ic { width: 17px; height: 17px; color: inherit; }
+    .ts-btn:hover { opacity: 1; background: var(--toggle-bg-hover); }
+    /* 选中项用实心亮底 + 反色图标，对比度拉满，一眼看出当前生效的是哪个 */
+    .ts-btn[aria-pressed="true"] {
+      opacity: 1;
+      background: var(--toggle-fg);
+      color: var(--hero-solid);
+    }
+    .ts-btn[aria-pressed="true"]:hover { background: var(--toggle-fg); }
+    .ts-btn:active { transform: scale(.9); }
+    /* 焦点环画在按钮内侧，避免被分段容器裁掉 */
+    .ts-btn:focus-visible { outline: 2px solid var(--toggle-fg); outline-offset: -2px; }
 
+    /* ===== FOCUS ===== */
+    :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+    .hero :focus-visible { outline-color: #93c5fd; }
+
+    /* ===== BACK TO TOP ===== */
+    .back-top {
+      position: fixed; bottom: 28px; right: 28px; z-index: 999;
+      width: 44px; height: 44px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--blue); color: #fff; border: none; cursor: pointer;
+      box-shadow: 0 4px 16px color-mix(in srgb, var(--blue) 35%, transparent);
+      opacity: 0; transform: translateY(20px);
+      transition: opacity .35s, transform .35s, background .2s;
+      pointer-events: none;
+    }
+    .back-top .ic { width: 20px; height: 20px; color: #fff; }
+    .back-top.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .back-top:hover { background: var(--blue-strong); }
+
+    /* ================================================================
+       RESPONSIVE —— 全站仅两个断点：768（平板） / 640（手机）
+       ================================================================ */
+    @media (max-width: 768px) {
+      .data-table { font-size: 12px; }
+      .data-table thead th,
+      .data-table tbody td { padding: 8px 6px; white-space: nowrap; }
+    }
     @media (max-width: 640px) {
       .hero { padding: 48px 16px 40px; min-height: auto; }
       .hero h1 { font-size: 26px; }
@@ -499,52 +700,212 @@
       .hero-stat { padding: 12px 16px; min-width: auto; }
       .card { padding: 20px; }
       .section-title { font-size: 18px; }
+      .price-cell .p-value { font-size: 22px; }
+      .qstat .value { font-size: 26px; }
+      .quick-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .chart-wrap { height: 320px; }
+      .impact-grid { grid-template-columns: 1fr; }
+      .theme-switch { top: 10px; right: 10px; padding: 2px; gap: 1px; }
+      .ts-btn { width: 28px; height: 28px; }
+      .ts-btn .ic { width: 16px; height: 16px; }
     }
-
-    /* ===== BACK TO TOP ===== */
-    .back-top {
-      position: fixed; bottom: 28px; right: 28px; z-index: 999;
-      width: 44px; height: 44px; border-radius: 50%;
-      background: var(--blue); color: #fff; border: none; cursor: pointer;
-      font-size: 20px; line-height: 44px; text-align: center;
-      box-shadow: 0 4px 16px rgba(59,130,246,.35);
-      opacity: 0; transform: translateY(20px);
-      transition: opacity .35s, transform .35s, background .2s;
-      pointer-events: none;
-    }
-    .back-top.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
-    .back-top:hover { background: #2563eb; }
 
     /* ===== REDUCED MOTION ===== */
     @media (prefers-reduced-motion: reduce) {
       .particle { display: none !important; }
       .reveal, .tl-item { opacity: 1 !important; transform: none !important; }
-      .skeleton { animation: none !important; background: #e5e7eb !important; }
+      .skeleton { animation: none !important; background: var(--sk-1) !important; }
       *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
       html { scroll-behavior: auto; }
     }
 
-    /* ===== DARK MODE ===== */
+    /* ================================================================
+       DARK THEME
+       同一份令牌两处落点：① 系统偏好（无 data-theme 时生效）
+       ② 用户手动选择（html[data-theme="dark"]）
+       ================================================================ */
     @media (prefers-color-scheme: dark) {
-      :root {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
         --bg: #0f172a; --card: #1e293b; --border: #334155;
         --text: #e2e8f0; --sub: #94a3b8;
-        --blue-light: #1e3a5f; --red-light: #3b1a1a; --green-light: #143d2a; --amber-light: #3d2e14;
+        --red-light: #2e1414; --green-light: #0f3323; --amber-light: #3d2e14;
+        --up-text: #f87171; --down-text: #34d399; --flat-text: #fbbf24;
+        --accent-text: #93c5fd; --flat-fg: #fbbf24;
+        --ser-92: #60a5fa; --ser-95: #a78bfa; --ser-98: #2dd4bf; --ser-diesel: #94a3b8; --ser-yoy: #64748b;
+        --th-bg: #1a2332; --row-border: #2a3a52; --row-hover: #24334a;
+        --scroll-thumb: #475569; --sk-1: #2b3a52; --sk-2: #354763;
+        --dot-ring: #0f172a; --tl-line-a: #1d4ed8; --tl-line-b: #334155;
+        --callout-bg: linear-gradient(135deg, #16233a, #1b2a44);
+        --callout-border: #334155;
+        --chart-axis-label: #94a3b8; --chart-axis-line: #334155;
+        --chart-split-line: #2a3a52; --chart-zoom-bg: #2a3a52; --chart-icon: #94a3b8;
+        --chart-zoom-fill: rgba(96,165,250,.22);
+        --chart-area-from: rgba(96,165,250,.22); --chart-area-to: rgba(96,165,250,0);
+        --chart-tooltip-bg: rgba(2,6,23,.97); --chart-tooltip-border: #334155;
+        --chart-tooltip-fg: #f1f5f9;
         --shadow-sm: 0 1px 3px rgba(0,0,0,.25);
         --shadow: 0 4px 24px rgba(0,0,0,.35);
         --shadow-lg: 0 12px 40px rgba(0,0,0,.45);
       }
-      body { background: var(--bg); }
-      .data-table thead th { background: #1a2332; }
-      .data-table tbody tr:hover { background: #1e293b; }
-      .callout { background: linear-gradient(135deg, #1a2332, #1e293b); border-color: #334155; }
-      .tl-item .tl-dot { border-color: #0f172a; }
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0f172a; --card: #1e293b; --border: #334155;
+      --text: #e2e8f0; --sub: #94a3b8;
+      --red-light: #2e1414; --green-light: #0f3323; --amber-light: #3d2e14;
+      --up-text: #f87171; --down-text: #34d399; --flat-text: #fbbf24;
+      --accent-text: #93c5fd; --flat-fg: #fbbf24;
+      --ser-92: #60a5fa; --ser-95: #a78bfa; --ser-98: #2dd4bf; --ser-diesel: #94a3b8; --ser-yoy: #64748b;
+      --th-bg: #1a2332; --row-border: #2a3a52; --row-hover: #24334a;
+      --scroll-thumb: #475569; --sk-1: #2b3a52; --sk-2: #354763;
+      --dot-ring: #0f172a; --tl-line-a: #1d4ed8; --tl-line-b: #334155;
+      --callout-bg: linear-gradient(135deg, #16233a, #1b2a44);
+      --callout-border: #334155;
+      --chart-axis-label: #94a3b8; --chart-axis-line: #334155;
+      --chart-split-line: #2a3a52; --chart-zoom-bg: #2a3a52; --chart-icon: #94a3b8;
+      --chart-zoom-fill: rgba(96,165,250,.22);
+      --chart-area-from: rgba(96,165,250,.22); --chart-area-to: rgba(96,165,250,0);
+      --chart-tooltip-bg: rgba(2,6,23,.97); --chart-tooltip-border: #334155;
+      --chart-tooltip-fg: #f1f5f9;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.25);
+      --shadow: 0 4px 24px rgba(0,0,0,.35);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,.45);
+    }
+
+    /* ===== PRINT（数据报告存档/打印）===== */
+    @media print {
+      :root {
+        color-scheme: light !important;
+        --bg: #fff !important; --card: #fff !important;
+        --border: #d1d5db !important; --text: #111827 !important; --sub: #4b5563 !important;
+        --shadow: none !important; --shadow-sm: none !important; --shadow-lg: none !important;
+        --row-hover: #fff !important; --th-bg: #f3f4f6 !important;
+      }
+      .particles, .progress-bar, .back-top, .theme-switch { display: none !important; }
+      .reveal, .tl-item { opacity: 1 !important; transform: none !important; }
+      .card, .qstat, .impact-card, .callout, .tl-item { break-inside: avoid; }
+      .hero, footer {
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
     }
   </style>
 </head>
 <body>
 
+<!-- ========== 图标库（stroke 继承 currentColor，尺寸由 .ic 控制）========== -->
+<svg aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden">
+  <symbol id="i-trend" viewBox="0 0 24 24">
+    <polyline points="3 16 9 10 13 14 21 6" />
+    <polyline points="15 6 21 6 21 12" />
+  </symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24">
+    <line x1="5" y1="20" x2="5" y2="13" />
+    <line x1="12" y1="20" x2="12" y2="5" />
+    <line x1="19" y1="20" x2="19" y2="9" />
+  </symbol>
+  <symbol id="i-list" viewBox="0 0 24 24">
+    <line x1="9" y1="6.5" x2="20" y2="6.5" />
+    <line x1="9" y1="12" x2="20" y2="12" />
+    <line x1="9" y1="17.5" x2="20" y2="17.5" />
+    <line x1="4" y1="6.5" x2="4.6" y2="6.5" />
+    <line x1="4" y1="12" x2="4.6" y2="12" />
+    <line x1="4" y1="17.5" x2="4.6" y2="17.5" />
+  </symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.5" />
+    <polyline points="12 7 12 12 16 14.2" />
+  </symbol>
+  <symbol id="i-users" viewBox="0 0 24 24">
+    <path d="M15.5 20v-1.4a3.4 3.4 0 0 0-3.4-3.4H6.9A3.4 3.4 0 0 0 3.5 18.6V20" />
+    <circle cx="9.5" cy="8.2" r="3.2" />
+    <path d="M20.5 20v-1.4a3.4 3.4 0 0 0-2.6-3.3" />
+    <path d="M15.4 5.2a3.2 3.2 0 0 1 0 6" />
+  </symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24">
+    <path d="M12 21s6.5-5.7 6.5-10.3A6.5 6.5 0 0 0 5.5 10.7C5.5 15.3 12 21 12 21z" />
+    <circle cx="12" cy="10.6" r="2.4" />
+  </symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24">
+    <path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .9 1.6l.2 1.5h5l.2-1.5c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3z" />
+    <line x1="9.6" y1="19.8" x2="14.4" y2="19.8" />
+  </symbol>
+  <symbol id="i-car" viewBox="0 0 24 24">
+    <path d="M4 16.5h16" />
+    <path d="M6 16.5l1.4-5.2A2 2 0 0 1 9.3 9.8h5.4a2 2 0 0 1 1.9 1.5l1.4 5.2" />
+    <circle cx="7.8" cy="18.4" r="1.5" />
+    <circle cx="16.2" cy="18.4" r="1.5" />
+  </symbol>
+  <symbol id="i-scooter" viewBox="0 0 24 24">
+    <circle cx="5.5" cy="17.5" r="2.8" />
+    <circle cx="18.5" cy="17.5" r="2.8" />
+    <path d="M8.3 17.5l3-9h3.2" />
+    <path d="M14.5 8.5l3.6 9" />
+  </symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24">
+    <path d="M3 7h11v9.5H3z" />
+    <path d="M14 10.5h4l3 3v3h-7z" />
+    <circle cx="7" cy="18.6" r="1.7" />
+    <circle cx="17.5" cy="18.6" r="1.7" />
+  </symbol>
+  <symbol id="i-sprout" viewBox="0 0 24 24">
+    <path d="M12 21v-9.5" />
+    <path d="M12 11.5c0-3-2.1-5.2-5.2-5.2 0 3 2.1 5.2 5.2 5.2z" />
+    <path d="M12 14.2c0-2.9 2.1-5 5.2-5 0 2.9-2.1 5-5.2 5z" />
+  </symbol>
+  <symbol id="i-factory" viewBox="0 0 24 24">
+    <path d="M3 20V10l5 3V10l5 3V8l6 4v8z" />
+    <line x1="2.5" y1="20" x2="21.5" y2="20" />
+  </symbol>
+  <symbol id="i-plane" viewBox="0 0 24 24">
+    <path d="M21 3l-9.2 9.6" />
+    <path d="M21 3l-7 18-3.2-8.4L3 9.4z" />
+  </symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24">
+    <path d="M20 12a8 8 0 1 1-2.4-5.7" />
+    <polyline points="20 4 20 9 15 9" />
+  </symbol>
+  <symbol id="i-arrow-up" viewBox="0 0 24 24">
+    <line x1="12" y1="19.5" x2="12" y2="5.5" />
+    <polyline points="6 11.5 12 5.5 18 11.5" />
+  </symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="4.2" />
+    <line x1="12" y1="2.6" x2="12" y2="5" />
+    <line x1="12" y1="19" x2="12" y2="21.4" />
+    <line x1="2.6" y1="12" x2="5" y2="12" />
+    <line x1="19" y1="12" x2="21.4" y2="12" />
+    <line x1="5.4" y1="5.4" x2="7.1" y2="7.1" />
+    <line x1="16.9" y1="16.9" x2="18.6" y2="18.6" />
+    <line x1="18.6" y1="5.4" x2="16.9" y2="7.1" />
+    <line x1="7.1" y1="16.9" x2="5.4" y2="18.6" />
+  </symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24">
+    <path d="M20.2 14.4A8.5 8.5 0 0 1 9.6 3.8a8.6 8.6 0 1 0 10.6 10.6z" />
+  </symbol>
+  <symbol id="i-auto" viewBox="0 0 24 24">
+    <rect x="3" y="4.5" width="18" height="12" rx="2" />
+    <line x1="9" y1="19.8" x2="15" y2="19.8" />
+    <line x1="12" y1="16.5" x2="12" y2="19.8" />
+  </symbol>
+</svg>
+
 <div class="progress-bar" id="progressBar"></div>
+
+<div class="theme-switch" id="themeSwitch" role="group" aria-label="主题">
+  <button class="ts-btn" type="button" data-theme-mode="auto" aria-pressed="false"
+          title="跟随系统" aria-label="跟随系统">
+    <svg class="ic" aria-hidden="true"><use href="#i-auto" /></svg>
+  </button>
+  <button class="ts-btn" type="button" data-theme-mode="light" aria-pressed="false"
+          title="浅色" aria-label="浅色">
+    <svg class="ic" aria-hidden="true"><use href="#i-sun" /></svg>
+  </button>
+  <button class="ts-btn" type="button" data-theme-mode="dark" aria-pressed="false"
+          title="深色" aria-label="深色">
+    <svg class="ic" aria-hidden="true"><use href="#i-moon" /></svg>
+  </button>
+</div>
 
 <!-- Floating particles -->
 <div class="particles" id="particles"></div>
@@ -567,15 +928,15 @@
         <div class="lab">调价轮次</div>
       </div>
       <div class="hero-stat">
-        <div class="val" style="color:#f87171" id="hero-ups">-</div>
+        <div class="val is-up" id="hero-ups">-</div>
         <div class="lab">上调</div>
       </div>
       <div class="hero-stat">
-        <div class="val" style="color:#4ade80" id="hero-downs">-</div>
+        <div class="val is-down" id="hero-downs">-</div>
         <div class="lab">下调</div>
       </div>
       <div class="hero-stat">
-        <div class="val" style="color:#fbbf24" id="hero-cumulative">-</div>
+        <div class="val is-amber" id="hero-cumulative">-</div>
         <div class="lab">95#累计涨跌（元/升）</div>
       </div>
     </div>
@@ -586,27 +947,29 @@
 
   <!-- ========== 当前油价 ========== -->
   <div class="reveal">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-      <div class="section-title" style="margin-bottom:0;" id="currentPriceTitle">📍 油价加载中...</div>
-      <span style="font-size:12px;padding:4px 12px;border-radius:999px;font-weight:700;" id="priceTrendBadge">加载中</span>
+    <div class="price-head">
+      <div class="section-title" id="currentPriceTitle">
+        <svg class="ic" aria-hidden="true"><use href="#i-pin" /></svg><span id="currentPriceText">油价加载中…</span>
+      </div>
+      <span class="trend-badge" id="priceTrendBadge">加载中</span>
     </div>
     <div class="price-grid" id="priceGrid">
-      <div class="price-cell reveal" style="transition-delay:0s">
+      <div class="price-cell reveal">
         <div class="p-label">92# 汽油</div>
         <div class="p-value counter skeleton" id="counter92" data-target="0" data-prefix="" data-suffix="">--</div>
         <div class="p-change skeleton" id="change92">—</div>
       </div>
-      <div class="price-cell reveal" style="transition-delay:0.1s">
+      <div class="price-cell reveal">
         <div class="p-label">95# 汽油</div>
         <div class="p-value counter skeleton" id="counter95" data-target="0" data-prefix="" data-suffix="">--</div>
         <div class="p-change skeleton" id="change95">—</div>
       </div>
-      <div class="price-cell reveal" style="transition-delay:0.2s">
+      <div class="price-cell reveal">
         <div class="p-label">98# 汽油</div>
         <div class="p-value counter skeleton" id="counter98" data-target="0" data-prefix="" data-suffix="">--</div>
         <div class="p-change skeleton" id="change98">—</div>
       </div>
-      <div class="price-cell reveal" style="transition-delay:0.3s">
+      <div class="price-cell reveal">
         <div class="p-label">0# 柴油</div>
         <div class="p-value counter skeleton" id="counterDiesel" data-target="0" data-prefix="" data-suffix="">--</div>
         <div class="p-change skeleton" id="changeDiesel">—</div>
@@ -616,12 +979,12 @@
 
   <!-- ========== 快速统计 ========== -->
   <div class="quick-stats reveal">
-    <div class="qstat up">
+    <div class="qstat neutral">
       <div class="label">92# 年内峰值</div>
       <div class="value"><span class="counter" id="statPeak" data-target="0" data-prefix="¥" data-suffix="">0.00</span></div>
       <div class="suffix" id="statPeakDate">—</div>
     </div>
-    <div class="qstat down">
+    <div class="qstat neutral">
       <div class="label">92# 年初基准价</div>
       <div class="value"><span class="counter" id="statBase" data-target="0" data-prefix="¥" data-suffix="">0.00</span></div>
       <div class="suffix" id="statBaseDate">—</div>
@@ -638,39 +1001,45 @@
     </div>
     <div class="qstat neutral" id="statYoYCard">
       <div class="label">92# 较去年同月</div>
-      <div class="value"><span id="statYoY">--</span></div>
+      <div class="value"><span class="counter" id="statYoY" data-target="0" data-prefix="¥" data-suffix="">--</span></div>
       <div class="suffix" id="statYoYDesc">—</div>
     </div>
   </div>
 
   <!-- ========== 趋势图 ========== -->
   <div class="card reveal">
-    <div class="section-title">📈 济南成品油零售价格走势（元/升）</div>
+    <div class="section-title"><svg class="ic" aria-hidden="true"><use href="#i-trend" /></svg>济南成品油零售价格走势（元/升）</div>
     <div class="chart-wrap"><div id="mainChart" style="width:100%;height:100%"></div></div>
   </div>
 
   <!-- ========== 柱状图 ========== -->
   <div class="card reveal">
-    <div class="section-title">📊 历次调价幅度对比（元/吨）</div>
+    <div class="section-title"><svg class="ic" aria-hidden="true"><use href="#i-bars" /></svg>历次调价幅度对比（元/吨）</div>
+    <div class="chart-legend">
+      <span class="lg"><i class="sw sw-up"></i>上调</span>
+      <span class="lg"><i class="sw sw-down"></i>下调</span>
+      <span class="lg"><i class="sw sw-flat"></i>搁浅</span>
+      <span class="lg lg-hint">左＝汽油　右＝柴油（柱宽区分）</span>
+    </div>
     <div class="chart-wrap"><div id="barChart" style="width:100%;height:100%"></div></div>
   </div>
 
   <!-- ========== 数据表格 ========== -->
   <div class="card reveal">
-    <div class="section-title" id="tableSectionTitle">📋 全部调价记录</div>
+    <div class="section-title" id="tableSectionTitle"><svg class="ic" aria-hidden="true"><use href="#i-list" /></svg><span id="tableSectionText">全部调价记录</span></div>
     <div class="tbl-wrap">
       <table class="data-table">
         <thead>
           <tr>
-            <th>#</th>
+            <th>轮次</th>
             <th>调价日期</th>
             <th>趋势</th>
-            <th>汽油<br>元/吨</th>
-            <th>92#<br>元/升</th>
-            <th>95#<br>元/升</th>
-            <th>98#<br>元/升</th>
-            <th>0#柴油<br>元/升</th>
-            <th>92#累计<br>Δ元/升</th>
+            <th>汽油<span class="th-sub">元/吨</span></th>
+            <th>92#<span class="th-sub">元/升</span></th>
+            <th>95#<span class="th-sub">元/升</span></th>
+            <th>98#<span class="th-sub">元/升</span></th>
+            <th>0#柴油<span class="th-sub">元/升</span></th>
+            <th>92#累计<span class="th-sub">Δ元/升</span></th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -680,9 +1049,9 @@
 
   <!-- ========== 时间轴影响分析 ========== -->
   <div class="card reveal">
-    <div class="section-title">⏳ 分段影响分析</div>
+    <div class="section-title"><svg class="ic" aria-hidden="true"><use href="#i-clock" /></svg>分段影响分析</div>
     <div class="callout">
-      <div class="callout-icon">💡</div>
+      <div class="callout-icon"><svg class="ic" aria-hidden="true"><use href="#i-bulb" /></svg></div>
       <div class="callout-text">
         <strong>济南作为山东省会</strong>，是华北重要的交通枢纽和物流集散中心。油价变动对本地约<strong>340万辆</strong>机动车、数万名网约车司机、以及通达全省的货运网络产生直接影响。以下按时间分段分析。
       </div>
@@ -693,45 +1062,45 @@
   </div>
 
   <!-- ========== 影响维度 ========== -->
-  <div class="section-title reveal">🔍 油价变动对济南不同群体的影响</div>
+  <div class="section-title reveal"><svg class="ic" aria-hidden="true"><use href="#i-users" /></svg>油价变动对济南不同群体的影响</div>
   <div class="impact-grid">
     <div class="impact-card n1 reveal">
-      <div class="ic-icon">🚗</div>
+      <div class="ic-icon"><svg class="ic" aria-hidden="true"><use href="#i-car" /></svg></div>
       <div class="ic-title">私家车主 · 日常通勤</div>
       <div class="ic-body" id="icBody1">
         以济南经十路通勤族为例：Q1五连涨后月度油费飙升近<span class="ic-dyn" id="icPeakCost">—</span>元；近期调价后月均油费约<span class="ic-dyn" id="icCurrentCost">—</span>元。全年油费波动幅度超<span class="ic-dyn" id="icAmpCost">—</span>元/月，高位期间不少车主选择拼车或临时换乘BRT。
       </div>
     </div>
     <div class="impact-card n2 reveal">
-      <div class="ic-icon">🛵</div>
+      <div class="ic-icon"><svg class="ic" aria-hidden="true"><use href="#i-scooter" /></svg></div>
       <div class="ic-title">网约车 · 外卖配送</div>
       <div class="ic-body" id="icBody2">
         高油价期间网约车燃油附加费上调，全职网约车司机月增油费约<span class="ic-dyn" id="icDriverCost">—</span>元，部分司机选择错峰出车降低空驶率。油价回落后附加费逐步回调。
       </div>
     </div>
     <div class="impact-card n3 reveal">
-      <div class="ic-icon">🚛</div>
+      <div class="ic-icon"><svg class="ic" aria-hidden="true"><use href="#i-truck" /></svg></div>
       <div class="ic-title">物流货运 · 盖家沟</div>
       <div class="ic-body" id="icBody3">
         济南盖家沟物流园区是山东最大公路货运枢纽。柴油价格波动幅度达<span class="ic-dyn" id="icDieselAmp">—</span>元/升，400升大货车单次加满多花近<span class="ic-dyn" id="icDieselCost">—</span>元，部分专线被迫提价。油价回落后运价逐步回调，物流企业经营压力有所缓解。
       </div>
     </div>
     <div class="impact-card n4 reveal">
-      <div class="ic-icon">🌾</div>
+      <div class="ic-icon"><svg class="ic" aria-hidden="true"><use href="#i-sprout" /></svg></div>
       <div class="ic-title">农业 · 三夏生产</div>
       <div class="ic-body">
         济南周边章丘、长清、商河等区县夏收季与高油价周期高度重合。农机作业、粮食运输柴油成本增加约30%，每亩收割成本上升8~12元。6月降价恰逢其时，有助于平抑夏粮综合成本。
       </div>
     </div>
     <div class="impact-card n5 reveal">
-      <div class="ic-icon">🏭</div>
+      <div class="ic-icon"><svg class="ic" aria-hidden="true"><use href="#i-factory" /></svg></div>
       <div class="ic-title">制造业 · 高新区</div>
       <div class="ic-body">
         济南高新区、章丘明水经开区等制造业集聚区，原材料和成品运输费用受油价影响显著。上半年制造业物流成本同比上升约15%，部分中小企业利润空间被压缩。6月油价回落利好下半年工业运行。
       </div>
     </div>
     <div class="impact-card n6 reveal">
-      <div class="ic-icon">✈️</div>
+      <div class="ic-icon"><svg class="ic" aria-hidden="true"><use href="#i-plane" /></svg></div>
       <div class="ic-title">端午出行 · 消费提振</div>
       <div class="ic-body">
         6月18日油价下调与端午假期无缝衔接，济南绕城高速车流量预计同比增长超15%。趵突泉、大明湖、千佛山等景区周边自驾游激增，南部山区农家乐和民宿预订量较5月翻倍，油费节省转化为消费增量。
@@ -741,11 +1110,15 @@
 
 </div>
 
-<button class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="回到顶部">↑</button>
+<button class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="回到顶部">
+  <svg class="ic" aria-hidden="true"><use href="#i-arrow-up" /></svg>
+</button>
 
 <footer>
   <p>数据来源：国家发展和改革委员会 · 山东省发展和改革委员会 · 汽车之家油价频道 &nbsp;|&nbsp; 仅供参考，实际以济南各加油站挂牌为准</p>
-  <p style="margin-top:6px">📍 基准城市：济南 &nbsp;|&nbsp; 更新至 <span id="updateDate"></span> &nbsp;|&nbsp; <a href="https://github.com/ToniaXuu" target="_blank">@ToniaXuu</a></p>
+  <p style="margin-top:6px">
+    <svg class="ic ic-sm" aria-hidden="true"><use href="#i-pin" /></svg>基准城市：济南 &nbsp;|&nbsp; 更新至 <span id="updateDate"></span> &nbsp;|&nbsp; <a href="https://github.com/ToniaXuu" target="_blank" rel="noopener">@ToniaXuu</a>
+  </p>
 </footer>
 
 <script>
@@ -802,20 +1175,25 @@ function animateCounter(el) {
   if (isNaN(target)) return;
   const prefix = el.dataset.prefix || '';
   const suffix = el.dataset.suffix || '';
-  const decimals = String(target).includes('.') ? String(target).split('.')[1].length : 0;
+  const decimals = (el.dataset.decimals !== undefined && el.dataset.decimals !== '')
+    ? parseInt(el.dataset.decimals, 10)
+    : (String(target).includes('.') ? String(target).split('.')[1].length : 0);
   const duration = 1800;
   const start = performance.now();
+  const finish = () => { el.textContent = prefix + target.toFixed(decimals) + suffix; };
 
   function update(ts) {
-    const elapsed = ts - start;
-    const progress = Math.min(elapsed / duration, 1);
+    // rAF 时间戳取的是帧起点，可能早于同帧内调用的 performance.now()，
+    // 不夹紧下限会出现 progress<0 → 数字短暂显示成 -0.06 这类负值
+    const progress = Math.max(0, Math.min((ts - start) / duration, 1));
     const eased = 1 - Math.pow(1 - progress, 3);
-    const current = target * eased;
-    el.textContent = prefix + current.toFixed(decimals) + suffix;
+    el.textContent = prefix + (target * eased).toFixed(decimals) + suffix;
     if (progress < 1) requestAnimationFrame(update);
-    else el.textContent = prefix + target.toFixed(decimals) + suffix;
+    else finish();
   }
   requestAnimationFrame(update);
+  // 兜底：rAF 被节流/挂起时，到点强制落到终值
+  setTimeout(finish, duration + 400);
 }
 
 const counterObserver = new IntersectionObserver((entries) => {
@@ -907,8 +1285,8 @@ async function init() {
       meta.year + '年' + formatDate(meta.lastUpdated);
 
     // ---- 表格标题 ----
-    document.getElementById('tableSectionTitle').textContent =
-      '📋 ' + meta.year + '年全部调价记录 · ' + meta.city + '地区';
+    document.getElementById('tableSectionText').textContent =
+      meta.year + '年全部调价记录 · ' + meta.city + '地区';
 
     // ---- 影响卡片数值填充 ----
     updateImpactCards(prices, meta.city);
@@ -922,7 +1300,9 @@ async function init() {
     document.getElementById('hero-rounds').textContent = prices.length;
     document.getElementById('hero-ups').textContent = ups;
     document.getElementById('hero-downs').textContent = downs;
-    document.getElementById('hero-cumulative').textContent = cumSign + cumL95.toFixed(2);
+    const cumEl = document.getElementById('hero-cumulative');
+    cumEl.textContent = cumSign + cumL95.toFixed(2);
+    cumEl.className = 'val ' + (cumL95 > 0 ? 'is-up' : cumL95 < 0 ? 'is-down' : 'is-amber');
 
     // ---- 当前油价 ----
     const prev = prices.length >= 2 ? prices[prices.length - 2] : null;
@@ -931,30 +1311,26 @@ async function init() {
     const diff98 = prev ? +(last.p98 - prev.p98).toFixed(2) : 0;
     const diffDiesel = prev ? +(last.pDiesel - prev.pDiesel).toFixed(2) : 0;
 
-    document.getElementById('currentPriceTitle').innerHTML =
-      '📍 ' + meta.city + '今日油价 · ' + formatDate(last.date) + '调价后';
+    document.getElementById('currentPriceText').textContent =
+      meta.city + '今日油价 · ' + formatDate(last.date) + '调价后';
 
-    // 趋势标签
+    // 趋势标签（样式走 class，不再写内联变量）
     const badge = document.getElementById('priceTrendBadge');
-    if (last.type === 'down') {
+    const badgeType = ['up', 'down', 'flat'].indexOf(last.type) >= 0 ? last.type : 'flat';
+    if (badgeType === 'down') {
       badge.textContent = '▼ 下调 ' + Math.abs(last.gas) + '元/吨';
-      badge.style.color = 'var(--green)';
-      badge.style.background = 'var(--green-light)';
-    } else if (last.type === 'up') {
+    } else if (badgeType === 'up') {
       badge.textContent = '▲ 上调 +' + last.gas + '元/吨';
-      badge.style.color = 'var(--red)';
-      badge.style.background = 'var(--red-light)';
     } else {
       badge.textContent = '— 搁浅';
-      badge.style.color = '#92400e';
-      badge.style.background = 'var(--amber-light)';
     }
+    badge.className = 'trend-badge ' + badgeType;
 
     // 设置价格 counter 目标值（移除骨架屏）
-    setCounter('counter92', last.p92);
-    setCounter('counter95', last.p95);
-    setCounter('counter98', last.p98);
-    setCounter('counterDiesel', last.pDiesel);
+    setCounter('counter92', last.p92, 2);
+    setCounter('counter95', last.p95, 2);
+    setCounter('counter98', last.p98, 2);
+    setCounter('counterDiesel', last.pDiesel, 2);
 
     // 较上次变动
     setChangeText('change92', diff92);
@@ -969,29 +1345,34 @@ async function init() {
     const minEntry = prices.find(d => d.p92 === min92);
     const amplitude = +(peak92 - min92).toFixed(2);
 
-    setCounter('statPeak', peak92);
+    setCounter('statPeak', peak92, 2);
     document.getElementById('statPeakDate').textContent = peakEntry
       ? formatDate(peakEntry.date) + ' 调价后' : '—';
 
-    setCounter('statBase', baseL92);
+    setCounter('statBase', baseL92, 2);
     document.getElementById('statBaseDate').textContent = prices[0]
       ? formatDate(prices[0].date) + (prices[0].type === 'flat' ? ' 搁浅' : '') : '—';
 
-    setCounter('statAmplitude', amplitude);
+    setCounter('statAmplitude', amplitude, 2);
     document.getElementById('statAmplitudeRange').textContent =
       '最高 ' + peak92.toFixed(2) + ' → 最低 ' + min92.toFixed(2);
 
     // 较去年同月
+    const yoyEl = document.getElementById('statYoY');
     if (prices2025 && prices2025.length > 0) {
       const last2025 = prices2025[prices2025.length - 1];
       const yoyDiff = +(last.p92 - last2025.p92).toFixed(2);
-      document.getElementById('statYoY').textContent = (yoyDiff >= 0 ? '+' : '') + yoyDiff.toFixed(2);
+      setSignedCounter('statYoY', yoyDiff, 2);
       document.getElementById('statYoYDesc').textContent = '去年同月 92# ¥' + last2025.p92.toFixed(2);
       const yoyCard = document.getElementById('statYoYCard');
       yoyCard.className = 'qstat ' + (yoyDiff > 0 ? 'up' : yoyDiff < 0 ? 'down' : 'neutral');
+    } else {
+      // 没有去年同期数据时别让它变成 counter：否则会被滚成 ¥0.00，看着像「与去年持平」
+      yoyEl.classList.remove('counter');
+      yoyEl.textContent = '—';
     }
     const recentDowns = detectRecentStreak(prices);
-    setCounter('statRecent', recentDowns.sum);
+    setSignedCounter('statRecent', recentDowns.sum, 2);
     document.getElementById('statRecentLabel').textContent = recentDowns.label;
     document.getElementById('statRecentDesc').textContent = recentDowns.desc;
     // 动态调整卡片样式
@@ -1003,6 +1384,9 @@ async function init() {
 
     // ---- 渲染表格 ----
     renderTable(prices, baseL92);
+
+    // ---- 缓存数据，供主题切换时原地重绘图表 ----
+    _chartData = { prices: prices, prices2025: prices2025 };
 
     // ---- 渲染图表 ----
     renderMainChart(prices, prices2025);
@@ -1022,27 +1406,57 @@ async function init() {
 
 // ============ 数据加载失败时显示警告和重试按钮 ============
 function showDataWarning() {
-  const titleEl = document.getElementById('currentPriceTitle');
-  titleEl.innerHTML = '⚠️ 数据加载失败，已使用本地缓存 &nbsp;<button id="retryBtn" style="background:#3b82f6;color:#fff;border:none;padding:4px 14px;border-radius:999px;font-size:12px;cursor:pointer;">点击重试</button>';
+  const textEl = document.getElementById('currentPriceText');
+  if (textEl) textEl.textContent = '数据加载失败，已使用本地缓存';
 
-  document.getElementById('retryBtn').addEventListener('click', async function() {
-    this.textContent = '重试中...';
+  const titleEl = document.getElementById('currentPriceTitle');
+  if (titleEl && !document.getElementById('retryBtn')) {
+    titleEl.insertAdjacentHTML('beforeend',
+      '<button class="btn-retry" id="retryBtn" type="button">' +
+      '<svg class="ic" aria-hidden="true"><use href="#i-refresh" /></svg><span>点击重试</span></button>');
+  }
+
+  const btn = document.getElementById('retryBtn');
+  if (!btn) return;
+  const setLabel = (text) => {
+    const s = btn.querySelector('span');
+    if (s) s.textContent = text;
+  };
+  btn.addEventListener('click', async function () {
     this.disabled = true;
+    setLabel('重试中…');
     try {
       const resp = await fetch('./data.json', { cache: 'reload' });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       dataLoadFailed = false;
-      location.reload();
+      // 重新走一遍初始化，而不是整页重载
+      btn.remove();
+      retryBtnAdded = false;
+      init();
     } catch (e) {
-      this.textContent = '仍然失败，稍后再试';
-      setTimeout(() => { this.textContent = '点击重试'; this.disabled = false; }, 3000);
+      setLabel('仍然失败，稍后再试');
+      setTimeout(() => { setLabel('点击重试'); btn.disabled = false; }, 3000);
     }
   });
   retryBtnAdded = true;
 }
-function setCounter(id, val) {
+function setCounter(id, val, decimals) {
   const el = document.getElementById(id);
-  if (el) { el.dataset.target = val; el.classList.remove('skeleton'); }
+  if (!el) return;
+  el.dataset.target = val;
+  // 显式指定小数位：否则 10 → "10"、2.2 → "¥2.2"，同排卡片位数不齐
+  if (decimals !== undefined) el.dataset.decimals = decimals;
+  el.classList.remove('skeleton');
+}
+
+// 有符号金额：统一成 +¥0.79 / -¥0.31。
+// 「连涨/连降累计」与「较去年同月」同排，必须同格式（有符号 + 币种），
+// 否则一张是「¥0.55」、一张是「+0.89」，方向得靠颜色猜。
+function setSignedCounter(id, val, decimals) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.dataset.prefix = (val > 0 ? '+' : val < 0 ? '-' : '') + '¥';
+  setCounter(id, Math.abs(val), decimals);
 }
 
 // ============ 辅助：设置变动文本 ============
@@ -1076,29 +1490,33 @@ function detectRecentStreak(prices) {
       break;
     }
   }
-  const sum = +streak.reduce((s, d) => s + (d.p92 - (streak[0].p92 || 0)), last.p92 - streak[0].p92).toFixed(2);
-  const absSum = Math.abs(last.p92 - streak[0].p92).toFixed(2);
+  // 连涨/连降累计 = 末次价 −「本段最开始那一次调价之前」的价。
+  // prices[] 存的是「本次调价之后」的价，所以段内首条自身的涨跌基准是它的前一条；
+  // 若拿 streak[0] 自己当基准，会把段内第一条的涨跌整段漏掉，少算一格。
+  // （实测 r13=7.15 → r14=7.39 → r15=7.94：正确 0.79，旧写法只给出 0.55）
+  const baseIdx = prices.length - streak.length - 1;
+  const baseP92 = baseIdx >= 0 ? prices[baseIdx].p92 : prices[0].p92;
+  const signedSum = +(last.p92 - baseP92).toFixed(2);
 
   if (streak.length >= 2 && last.type === 'down') {
     return {
-      sum: parseFloat(absSum),
+      sum: signedSum,
       label: streak.length + '连降累计',
       desc: '92#；' + streak.map(d => formatDate(d.date)).join('+') + '合计',
       cssClass: 'down'
     };
   } else if (streak.length >= 2 && last.type === 'up') {
     return {
-      sum: parseFloat(absSum),
+      sum: signedSum,
       label: streak.length + '连涨累计',
       desc: '92#；' + streak.map(d => formatDate(d.date)).join('+') + '合计',
       cssClass: 'up'
     };
   }
   // 单次变动
-  const diff = last.p92 - (prices.length >= 2 ? prices[prices.length - 2].p92 : last.p92);
-  const absDiff = Math.abs(diff);
+  const diff = +(last.p92 - (prices.length >= 2 ? prices[prices.length - 2].p92 : last.p92)).toFixed(2);
   return {
-    sum: parseFloat(absDiff.toFixed(2)),
+    sum: diff,
     label: last.type === 'up' ? '上调' : last.type === 'down' ? '下调' : '变动',
     desc: '92# ' + formatDate(last.date),
     cssClass: last.type === 'up' ? 'up' : last.type === 'down' ? 'down' : 'neutral'
@@ -1114,10 +1532,10 @@ function renderTable(prices, baseL92) {
     const dieselStr = d.diesel !== 0 ? signedNum(d.diesel) : '—';
     const cum = +(d.p92 - baseL92).toFixed(2);
     const cumStr = cum >= 0 ? '+' + cum.toFixed(2) : cum.toFixed(2);
-    const gasColor = d.gas > 0 ? 'var(--red)' : d.gas < 0 ? 'var(--green)' : 'var(--amber)';
-    const cumColor = cum > 0 ? 'var(--red)' : cum < 0 ? 'var(--green)' : 'var(--sub)';
+    const gasColor = d.gas > 0 ? 'var(--up-text)' : d.gas < 0 ? 'var(--down-text)' : 'var(--flat-text)';
+    const cumColor = cum > 0 ? 'var(--up-text)' : cum < 0 ? 'var(--down-text)' : 'var(--sub)';
     return `<tr>
-      <td style="color:var(--sub);font-size:12px">第${d.round}轮</td>
+      <td style="color:var(--sub);font-size:12px">${d.round}</td>
       <td><strong>${formatDate(d.date)}</strong></td>
       <td><span class="badge ${d.type}">${typeMap[d.type]}</span></td>
       <td style="font-weight:700;color:${gasColor}">${gasStr}</td>
@@ -1131,42 +1549,122 @@ function renderTable(prices, baseL92) {
 }
 
 // ============ 走势图 (ECharts) ============
-// ============ 图表主题 ============
+// ============ 图表主题（色值全部来自 CSS 令牌，JS 不再写死任何颜色）============
 let _chartTheme = null;
 let _mainChartInst = null;
 let _barChartInst = null;
+let _chartData = null;
+
+function cssVar(name, fallback) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name);
+  return (v && v.trim()) || fallback;
+}
+
 function getChartTheme() {
   if (_chartTheme) return _chartTheme;
-  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   _chartTheme = {
-    dark,
-    axisLabel: dark ? '#94a3b8' : '#6b7280',
-    axisLine: dark ? '#334155' : '#e5e7eb',
-    splitLine: dark ? '#1e293b' : '#f1f5f9',
-    dataZoomBg: dark ? '#1e293b' : '#f1f5f9',
-    dataZoomFill: 'rgba(59,130,246,.15)',
-    dieselLine: dark ? '#94a3b8' : '#374151',
-    legendText: dark ? '#94a3b8' : '#374151',
-    gridLineColor: dark ? '#1e293b' : '#f1f5f9',
+    dark: isDarkActive(),
+    axisLabel: cssVar('--chart-axis-label', '#6b7280'),
+    axisLine: cssVar('--chart-axis-line', '#e5e7eb'),
+    splitLine: cssVar('--chart-split-line', '#f1f5f9'),
+    dataZoomBg: cssVar('--chart-zoom-bg', '#f1f5f9'),
+    dataZoomFill: cssVar('--chart-zoom-fill', 'rgba(59,130,246,.15)'),
+    areaFrom: cssVar('--chart-area-from', 'rgba(59,130,246,.14)'),
+    areaTo: cssVar('--chart-area-to', 'rgba(59,130,246,0)'),
+    tipBg: cssVar('--chart-tooltip-bg', 'rgba(15,23,42,.94)'),
+    tipBorder: cssVar('--chart-tooltip-border', 'transparent'),
+    tipFg: cssVar('--chart-tooltip-fg', '#fff'),
+    handle: cssVar('--blue', '#3b82f6'),
+    iconColor: cssVar('--chart-icon', '#6b7280'),
+    ser92: cssVar('--ser-92', '#3b82f6'),
+    ser95: cssVar('--ser-95', '#8b5cf6'),
+    ser98: cssVar('--ser-98', '#0d9488'),
+    serDiesel: cssVar('--ser-diesel', '#475569'),
+    serYoY: cssVar('--ser-yoy', '#94a3b8'),
+    up: cssVar('--red', '#ef4444'),
+    down: cssVar('--green', '#10b981'),
+    flat: cssVar('--sub', '#6b7280'),
+    labelGas: cssVar('--chart-axis-label', '#6b7280'),
+    labelDiesel: cssVar('--sub', '#6b7280'),
+    // 「年初」胶囊上的文字：压在系列色上，需要一个两主题都能用的反色。
+    // 不能用写死的 #fff —— 暗色下 --ser-92 是 #60a5fa（偏亮），白字对比度只有 ~2.4:1。
+    // --hero-solid 恰好是深色且两主题同值，压在 #3b82f6 / #60a5fa 上分别是 5.1:1 / 7.4:1。
+    onAccent: cssVar('--hero-solid', '#0a0f1e'),
   };
   return _chartTheme;
 }
 
-// 监听系统主题变化，重绘图表
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-  _chartTheme = null; // 清除缓存
-  if (_mainChartInst) { _mainChartInst.dispose(); _mainChartInst = null; }
-  if (_barChartInst) { _barChartInst.dispose(); _barChartInst = null; }
-  const meta = document.getElementById('heroCity').textContent.includes('济南') ? null : null;
-  // 从 DOM 重新获取数据并重绘（通过重新触发 init 中的图表部分不太可行，改为直接重绘）
-  location.reload();
+// 主题切换 / 数据更新后重绘图表（替代原先的整页重载）
+function rerenderCharts() {
+  if (!_chartData || typeof echarts === 'undefined') return;
+  _chartTheme = null;
+  // 必须同步重绘：getComputedStyle 本身就会强制样式重算，不需要等 rAF；
+  // 而 rAF 在后台标签页不触发，挂上去会导致切主题后图表颜色不更新
+  renderMainChart(_chartData.prices, _chartData.prices2025);
+  renderBarChart(_chartData.prices);
+}
+
+// ================================================================
+// 主题管理：auto（跟随系统） / light / dark
+// 分段控件三选一 —— 点哪个就应用哪个，不做循环切换
+// 选择持久化到 localStorage；URL 参数 ?theme= 可临时覆盖（不落盘），便于分享与自动化验证
+// ================================================================
+const THEME_KEY = 'fpt-theme';
+const THEME_MODES = ['auto', 'light', 'dark'];
+const THEME_LABEL = { auto: '跟随系统', light: '浅色', dark: '深色' };
+
+function readThemeMode() {
+  let m = null;
+  try { m = new URLSearchParams(location.search).get('theme'); } catch (e) {}
+  if (!m) { try { m = localStorage.getItem(THEME_KEY); } catch (e) {} }
+  return THEME_MODES.indexOf(m) >= 0 ? m : 'auto';
+}
+function systemDark() {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function isDarkActive() {
+  return _themeMode === 'dark' || (_themeMode === 'auto' && systemDark());
+}
+
+let _themeMode = readThemeMode();
+
+// 把「当前生效的模式」反映到分段控件的选中态上
+function syncThemeSwitch(mode) {
+  document.querySelectorAll('#themeSwitch .ts-btn').forEach(b => {
+    const on = b.dataset.themeMode === mode;
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.setAttribute('aria-label', THEME_LABEL[b.dataset.themeMode] + (on ? '（当前）' : ''));
+  });
+}
+
+function applyTheme(mode, persist) {
+  _themeMode = mode;
+  const root = document.documentElement;
+  if (mode === 'auto') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', mode);
+  if (persist) { try { localStorage.setItem(THEME_KEY, mode); } catch (e) {} }
+  syncThemeSwitch(mode);
+  rerenderCharts();
+}
+
+document.querySelectorAll('#themeSwitch .ts-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const mode = btn.dataset.themeMode;
+    if (mode !== _themeMode) applyTheme(mode, true);
+  });
 });
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  // auto 模式下系统主题变化：模式没变（仍是 auto），只需重绘图表
+  if (_themeMode === 'auto') rerenderCharts();
+});
+applyTheme(_themeMode, false);
 
 function renderMainChart(prices, prices2025) {
   const t = getChartTheme();
   const chartDom = document.getElementById('mainChart');
   if (_mainChartInst) _mainChartInst.dispose();
-  const chart = echarts.init(chartDom, t.dark ? 'dark' : undefined);
+  // 不用内置 'dark' 主题：它自带偏紫底色，与卡片底色不一致；改为完全自控
+  const chart = echarts.init(chartDom, null);
   _mainChartInst = chart;
 
   const labels = prices.map(d => formatDate(d.date));
@@ -1181,20 +1679,25 @@ function renderMainChart(prices, prices2025) {
   const peakIdx = prices.reduce((maxI, d, i, arr) => d.p92 > arr[maxI].p92 ? i : maxI, 0);
   const firstDownIdx = prices.findIndex(d => d.type === 'down');
 
-  // markLine: 峰值线
+  // markLine: 峰值水平参考线（只画线不打字——数值标签由下方 markPoint 图钉承担，
+  // 否则同一句「峰值 ¥8.87」会在图钉上方和虚线行尾各出现一次）
+  // label.show 必须显式写 false：直接删掉 label 键会回落到 ECharts 默认标签，
+  // 行尾会冒出一个灰扑扑的裸数字（实测「8.87」）
   const markLines = [];
   if (peakIdx >= 0) {
     markLines.push({
       name: '峰值 ¥' + prices[peakIdx].p92.toFixed(2),
       yAxis: prices[peakIdx].p92,
-      lineStyle: { color: '#ef4444', type: 'dashed', width: 1.5, opacity: 0.7 },
-      label: { formatter: '峰值 ¥{c}', position: 'insideEndTop', color: '#ef4444', fontSize: 11 }
+      lineStyle: { color: t.up, type: 'dashed', width: 1.5, opacity: 0.7 },
+      label: { show: false }
     });
   }
 
   // markPoint: 关键事件（需要显式 value，否则 {c} 为 undefined）
+  // 「年初」胶囊必须给够宽度：文字「年初 ¥6.67」实测宽 48px，而 symbolSize 只给 36 会溢出去
+  // ——浅色主题下溢出的白字落在白底上等于隐形。文字色也不能写死 '#fff'（暗色下对比度不足）。
   const markPoints = [
-    { name: '年初', coord: [labels[0], prices[0].p92], value: prices[0].p92.toFixed(2), symbol: 'roundRect', symbolSize: [36,20], itemStyle: { color: '#3b82f6' }, label: { show: true, formatter: '年初 ¥{c}', color: '#fff', fontSize: 9 } }
+    { name: '年初', coord: [labels[0], prices[0].p92], value: prices[0].p92.toFixed(2), symbol: 'roundRect', symbolSize: [62, 20], itemStyle: { color: t.ser92 }, label: { show: true, formatter: '年初 ¥{c}', color: t.onAccent, fontSize: 9 } }
   ];
 
   if (peakIdx > 0) {
@@ -1203,8 +1706,8 @@ function renderMainChart(prices, prices2025) {
       coord: [labels[peakIdx], prices[peakIdx].p92],
       value: prices[peakIdx].p92.toFixed(2),
       symbol: 'pin', symbolSize: 45,
-      itemStyle: { color: '#ef4444' },
-      label: { show: true, formatter: '峰值\n¥{c}', position: 'top', distance: 8, color: '#ef4444', fontSize: 11, fontWeight: 'bold' }
+      itemStyle: { color: t.up },
+      label: { show: true, formatter: '峰值\n¥{c}', position: 'top', distance: 8, color: t.up, fontSize: 11, fontWeight: 'bold' }
     });
   }
   if (firstDownIdx > 0 && firstDownIdx !== peakIdx) {
@@ -1213,24 +1716,27 @@ function renderMainChart(prices, prices2025) {
       coord: [labels[firstDownIdx], prices[firstDownIdx].p92],
       value: prices[firstDownIdx].p92.toFixed(2),
       symbol: 'pin', symbolSize: 40,
-      itemStyle: { color: '#10b981' },
-      label: { show: true, formatter: '首降\n¥{c}', position: 'bottom', distance: 8, color: '#10b981', fontSize: 11, fontWeight: 'bold' }
+      itemStyle: { color: t.down },
+      // position 必须 'top'：'bottom' 会把文字压到 0# 柴油那条线上（首降点下方就是黑线），
+      // 图钉上方那条 95#/98# 之间的空隙是空的
+      label: { show: true, formatter: '首降\n¥{c}', position: 'top', distance: 8, color: t.down, fontSize: 11, fontWeight: 'bold' }
     });
   }
 
   chart.setOption({
+    backgroundColor: 'transparent',
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(15,23,42,.92)',
-      borderColor: 'transparent',
-      textStyle: { color: '#fff', fontSize: 12 },
+      backgroundColor: t.tipBg,
+      borderColor: t.tipBorder,
+      textStyle: { color: t.tipFg, fontSize: 12 },
       formatter: function(params) {
-        let t = '<strong>' + params[0].axisValue + '</strong><br/>';
+        let tip = '<strong>' + params[0].axisValue + '</strong><br/>';
         params.forEach(function(p) {
-          t += '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + p.color + ';margin-right:6px;"></span>';
-          t += p.seriesName + ': <b>' + p.value.toFixed(2) + ' 元/升</b><br/>';
+          tip += '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + p.color + ';margin-right:6px;"></span>';
+          tip += p.seriesName + ': <b>' + p.value.toFixed(2) + ' 元/升</b><br/>';
         });
-        return t;
+        return tip;
       }
     },
     legend: {
@@ -1241,12 +1747,13 @@ function renderMainChart(prices, prices2025) {
     grid: { left: 55, right: 40, top: 52, bottom: 58 },
     toolbox: {
       right: 10, top: 0,
+      iconStyle: { borderColor: t.iconColor },
       feature: {
         saveAsImage: { title: '保存图片', name: '济南成品油价格走势', pixelRatio: 2 }
       }
     },
     dataZoom: [
-      { type: 'slider', bottom: 8, height: 12, borderColor: 'transparent', backgroundColor: t.dataZoomBg, fillerColor: t.dataZoomFill, handleStyle: { color: '#3b82f6' }, textStyle: { color: t.axisLabel } },
+      { type: 'slider', bottom: 8, height: 12, borderColor: 'transparent', backgroundColor: t.dataZoomBg, fillerColor: t.dataZoomFill, handleStyle: { color: t.handle }, textStyle: { color: t.axisLabel } },
       { type: 'inside' }
     ],
     xAxis: {
@@ -1257,46 +1764,44 @@ function renderMainChart(prices, prices2025) {
     },
     yAxis: {
       type: 'value', min: yMin, max: yMax,
-      axisLabel: { formatter: '{value} 元', color: t.axisLabel, fontSize: 11 },
+      // 元/升用两位小数，与价格卡/表格/计数器一致（否则会出现「5.2 元」这种半精度刻度）
+      axisLabel: { formatter: function(v){ return v.toFixed(2) + ' 元'; }, color: t.axisLabel, fontSize: 11 },
       splitLine: { lineStyle: { color: t.splitLine } }
     },
     series: [
       {
         name: '92# 汽油', type: 'line', data: prices.map(d=>d.p92),
-        smooth: true, symbol: 'circle', symbolSize: 6,
-        lineStyle: { color: '#3b82f6', width: 2.5 },
-        itemStyle: { color: '#3b82f6' },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(59,130,246,.10)'},{offset:1,color:'rgba(59,130,246,0)'}]) },
+        smooth: 0.15, symbol: 'circle', symbolSize: 6,
+        lineStyle: { color: t.ser92, width: 2.5 },
+        itemStyle: { color: t.ser92 },
+        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:t.areaFrom},{offset:1,color:t.areaTo}]) },
         markLine: { symbol: 'none', data: markLines, silent: true },
         markPoint: { data: markPoints, animation: true }
       },
       {
         name: '95# 汽油', type: 'line', data: prices.map(d=>d.p95),
-        smooth: true, symbol: 'circle', symbolSize: 5,
-        lineStyle: { color: '#8b5cf6', width: 2 },
-        itemStyle: { color: '#8b5cf6' },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(139,92,246,.06)'},{offset:1,color:'rgba(139,92,246,0)'}]) }
+        smooth: 0.15, symbol: 'circle', symbolSize: 5,
+        lineStyle: { color: t.ser95, width: 2 },
+        itemStyle: { color: t.ser95 }
       },
       {
         name: '98# 汽油', type: 'line', data: prices.map(d=>d.p98),
-        smooth: true, symbol: 'circle', symbolSize: 4,
-        lineStyle: { color: '#ef4444', width: 1.5, type: 'dashed' },
-        itemStyle: { color: '#ef4444' },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(239,68,68,.04)'},{offset:1,color:'rgba(239,68,68,0)'}]) }
+        smooth: 0.15, symbol: 'circle', symbolSize: 4,
+        lineStyle: { color: t.ser98, width: 1.6, type: 'dashed' },
+        itemStyle: { color: t.ser98 }
       },
       {
         name: '0# 柴油', type: 'line', data: prices.map(d=>d.pDiesel),
-        smooth: true, symbol: 'circle', symbolSize: 5,
-        lineStyle: { color: t.dieselLine, width: 2 },
-        itemStyle: { color: t.dieselLine },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(55,65,81,.06)'},{offset:1,color:'rgba(55,65,81,0)'}]) }
+        smooth: 0.15, symbol: 'circle', symbolSize: 5,
+        lineStyle: { color: t.serDiesel, width: 2 },
+        itemStyle: { color: t.serDiesel }
       },
       // 2025年92#同比参考线
       ...(prices2025 && prices2025.length ? [{
         name: '92# 2025同期', type: 'line', data: prices2025.map(d=>d.p92),
-        smooth: true, symbol: 'diamond', symbolSize: 4,
-        lineStyle: { color: '#94a3b8', width: 1.5, type: 'dotted' },
-        itemStyle: { color: '#94a3b8' }
+        smooth: 0.15, symbol: 'diamond', symbolSize: 4,
+        lineStyle: { color: t.serYoY, width: 1.5, type: 'dotted' },
+        itemStyle: { color: t.serYoY }
       }] : [])
     ]
   });
@@ -1313,50 +1818,66 @@ function renderBarChart(prices) {
   const t = getChartTheme();
   const chartDom = document.getElementById('barChart');
   if (_barChartInst) _barChartInst.dispose();
-  const chart = echarts.init(chartDom, t.dark ? 'dark' : undefined);
+  const chart = echarts.init(chartDom, null);
   _barChartInst = chart;
   const labels = prices.map(d => formatDate(d.date));
 
-  // 颜色: 红=上调, 绿=下调, 黄=搁浅
-  const colors = prices.map(d => d.type==='up'?'#ef4444':d.type==='down'?'#10b981':'#94a3b8');
-  const gasData = prices.map(d => d.gas);
-  const dieselData = prices.map(d => d.diesel);
+  // 颜色: 红=上调, 绿=下调, 灰=搁浅；圆角朝向随正负翻转（正→上圆角，负→下圆角）
+  // lift：把这一系列的数字标签再往外推几像素。
+  //   同一轮里汽油/柴油两根柱的标签在水平方向只差 ~3px（分类宽 62px，单个标签就要 41px），
+  //   横向已挤不下，只能纵向错开，否则「+695+670」会读成一串数字。
+  //   偏移方向随正负翻转：正值往上、负值往下，否则负值会被推进柱子里。
+  const mkBars = (vals, lift) => vals.map(v => ({
+    value: v,
+    itemStyle: {
+      color: v > 0 ? t.up : v < 0 ? t.down : t.flat,
+      borderRadius: v >= 0 ? [6, 6, 0, 0] : [0, 0, 6, 6]
+    },
+    label: {
+      position: v >= 0 ? 'top' : 'bottom',
+      offset: v >= 0 ? [0, -(lift || 0)] : [0, (lift || 0)]
+    }
+  }));
+  const gasData = mkBars(prices.map(d => d.gas), 0);
+  const dieselData = mkBars(prices.map(d => d.diesel), 13);
 
-  // 计算 Y 轴范围，预留标签空间
-  const maxVal = Math.max(...gasData.map(Math.abs), ...dieselData.map(Math.abs));
-  const yExtent = Math.ceil(maxVal / 200) * 200 + 400;
+  // 计算 Y 轴范围：按 500 元/吨取整，落在整齐刻度上（否则上下边界会和相邻刻度挤在一起）
+  const maxVal = Math.max(
+    ...prices.map(d => Math.abs(d.gas)),
+    ...prices.map(d => Math.abs(d.diesel))
+  );
+  const yExtent = Math.max(500, Math.ceil(maxVal * 1.25 / 500) * 500);
 
   chart.setOption({
+    backgroundColor: 'transparent',
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      backgroundColor: 'rgba(15,23,42,.92)',
-      borderColor: 'transparent',
-      textStyle: { color: '#fff', fontSize: 12 },
+      backgroundColor: t.tipBg,
+      borderColor: t.tipBorder,
+      textStyle: { color: t.tipFg, fontSize: 12 },
       formatter: function(params) {
-        let t = '<strong>' + params[0].axisValue + '</strong><br/>';
+        // 不要用 t 做累加变量：会遮蔽外层主题对象，导致 t.up/t.down 变 undefined
+        let tip = '<strong>' + params[0].axisValue + '</strong><br/>';
         params.forEach(function(p) {
           const v = p.value;
-          const sign = v > 0 ? '+' : v < 0 ? '' : '';
-          const clr = v > 0 ? '#ef4444' : v < 0 ? '#10b981' : '#94a3b8';
-          t += '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + clr + ';margin-right:6px;"></span>';
-          t += p.seriesName + ': <b style="color:' + clr + '">' + sign + v + ' 元/吨</b><br/>';
+          const sign = v > 0 ? '+' : '';
+          const clr = v > 0 ? t.up : v < 0 ? t.down : t.flat;
+          tip += '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + clr + ';margin-right:6px;"></span>';
+          tip += p.seriesName + ': <b style="color:' + clr + '">' + sign + v + ' 元/吨</b><br/>';
         });
-        return t;
+        return tip;
       }
     },
-    legend: {
-      top: 0, left: 'center',
-      textStyle: { fontSize: 12, color: t.axisLabel },
-      itemWidth: 12, itemHeight: 12
-    },
-    grid: { left: 55, right: 20, top: 60, bottom: 58 },
+    legend: { show: false },
+    grid: { left: 55, right: 20, top: 34, bottom: 58 },
     toolbox: {
       right: 10, top: 5,
+      iconStyle: { borderColor: t.iconColor },
       feature: { saveAsImage: { title: '保存图片', name: '济南成品油调价幅度', pixelRatio: 2 } }
     },
     dataZoom: [
-      { type: 'slider', bottom: 8, height: 12, borderColor: 'transparent', backgroundColor: t.dataZoomBg, fillerColor: t.dataZoomFill, handleStyle: { color: '#3b82f6' }, textStyle: { color: t.axisLabel } },
+      { type: 'slider', bottom: 8, height: 12, borderColor: 'transparent', backgroundColor: t.dataZoomBg, fillerColor: t.dataZoomFill, handleStyle: { color: t.handle }, textStyle: { color: t.axisLabel } },
       { type: 'inside' }
     ],
     xAxis: {
@@ -1373,22 +1894,20 @@ function renderBarChart(prices) {
     series: [
       {
         name: '汽油', type: 'bar', data: gasData,
-        itemStyle: { color: function(p) { return colors[p.dataIndex]; }, borderRadius: [6,6,0,0] },
         barMaxWidth: 28,
         label: {
           show: true, position: 'top', fontSize: 10,
-          color: '#374151', distance: 4,
+          color: t.labelGas, distance: 4,
           formatter: function(p) { return p.value !== 0 ? (p.value > 0 ? '+' : '') + p.value : '搁浅'; }
         },
         emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,.15)' } }
       },
       {
         name: '柴油', type: 'bar', data: dieselData,
-        itemStyle: { color: function(p) { return colors[p.dataIndex]; }, borderRadius: [6,6,0,0] },
         barMaxWidth: 22, barGap: '20%',
         label: {
           show: true, position: 'top', fontSize: 10,
-          color: '#9ca3af', distance: 4,
+          color: t.labelDiesel, distance: 4,
           formatter: function(p) { return p.value !== 0 ? (p.value > 0 ? '+' : '') + p.value : '—'; }
         },
         emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,.15)' } }
@@ -1465,11 +1984,14 @@ function generateTimeline(prices, city) {
     const isUp = type === 'up';
     const gasSum = group.reduce((s, p) => s + p.gas, 0);
     const dieselSum = group.reduce((s, p) => s + p.diesel, 0);
-    const p92Diff = +(end.p92 - start.p92).toFixed(2);
-    const p95Diff = +(end.p95 - start.p95).toFixed(2);
-    const pDieselDiff = +(end.pDiesel - start.pDiesel).toFixed(2);
+    // 每条记录存的是「本次调价之后」的价格，所以本段涨跌的基准是上一条记录，
+    // 而不是组内第一条 —— 否则单次调价段会算成 0 变动（"从8.42降至8.42"）
+    const ref = i > 0 ? prices[i - 1] : group[0];
+    const p92Diff = +(end.p92 - ref.p92).toFixed(2);
+    const p95Diff = +(end.p95 - ref.p95).toFixed(2);
+    const pDieselDiff = +(end.pDiesel - ref.pDiesel).toFixed(2);
 
-    groups.push({ type, group, start, end, cnt, isUp, gasSum, dieselSum, p92Diff, p95Diff, pDieselDiff });
+    groups.push({ type, group, start, end, ref, cnt, isUp, gasSum, dieselSum, p92Diff, p95Diff, pDieselDiff });
     i = j;
   }
 
@@ -1489,20 +2011,25 @@ function generateTimeline(prices, city) {
   groups.forEach((g, idx) => {
     const delay = (idx * 0.15).toFixed(2);
     const item = document.createElement('div');
-    item.className = 'tl-item ' + g.type + ' reveal';
+    // 只挂 tl-item：时间轴由自己的 observer 推进，避免与 .reveal 的
+    // 全局 observer 双重观察、并让 translateX 与 translateY 互相覆盖
+    item.className = 'tl-item ' + g.type;
     item.style.transitionDelay = delay + 's';
 
     // 标题
     let title;
     const dirLabel = g.isUp ? '涨' : '降';
     const dirVerb = g.isUp ? '上调' : '下调';
-    const sign = g.isUp ? '+' : '';
+    // 金额一律取绝对值再补显式符号：直接用 gasSum 会在「降」段出现
+    // 「合计下调-450元/吨」这种双负号（当前数据无两连降，暂未暴露）
+    const amt = Math.abs(g.gasSum);
+    const sign = g.isUp ? '+' : '-';
     if (g.cnt >= 3) {
-      title = `${g.cnt}连${dirLabel} · ${sign}${g.gasSum}元/吨`;
+      title = `${g.cnt}连${dirLabel} · ${sign}${amt}元/吨`;
     } else if (g.cnt === 2) {
-      title = `两连${dirLabel} · 合计${dirVerb}${g.gasSum}元/吨`;
+      title = `两连${dirLabel} · 合计${dirVerb}${amt}元/吨`;
     } else {
-      title = `单次${dirVerb} · ${sign}${g.gasSum}元/吨`;
+      title = `单次${dirVerb} · ${sign}${amt}元/吨`;
     }
 
     // 日期范围
@@ -1519,31 +2046,31 @@ function generateTimeline(prices, city) {
     // 峰值标记
     let peakNote = '';
     if (peakEntry && g.group.some(p => p.date === peakEntry.date)) {
-      peakNote = `<br><br><strong>📈 年内最高点：</strong>${city}92#达到${peak92.toFixed(2)}元/升，95# ${peakEntry.p95.toFixed(2)}元/升，98# ${peakEntry.p98.toFixed(2)}元/升。`;
+      peakNote = `<br><br><strong>年内最高点：</strong>${city}92#达到${peak92.toFixed(2)}元/升，95# ${peakEntry.p95.toFixed(2)}元/升，98# ${peakEntry.p98.toFixed(2)}元/升。`;
     }
 
     // 首降标记
     let firstDownNote = '';
     if (firstDown && g.group.some(p => p.date === firstDown.date)) {
-      firstDownNote = `<br><br><strong>🟢 年内首次降价：</strong>打破连涨态势，92#回落至${firstDown.p92.toFixed(2)}元/升，相比峰值降${(+(peak92 - firstDown.p92).toFixed(2))}元/升。`;
+      firstDownNote = `<br><br><strong>年内首次降价：</strong>打破连涨态势，92#回落至${firstDown.p92.toFixed(2)}元/升，相比峰值降${(peak92 - firstDown.p92).toFixed(2)}元/升。`;
     }
 
     // 首涨标记（降后的转折）
     let turnNote = '';
     if (firstUpAfterDown && g.group.some(p => p.date === firstUpAfterDown.date)) {
-      turnNote = `<br><br><strong>🔄 降后回调：</strong>油价在短暂下跌后再度上行，市场进入新一轮波动周期。`;
+      turnNote = `<br><br><strong>降后回调：</strong>油价在短暂下跌后再度上行，市场进入新一轮波动周期。`;
     }
 
     // 主体描述
     let body;
     if (g.isUp) {
-      body = `${city}92#从${g.start.p92.toFixed(2)}涨至${g.end.p92.toFixed(2)}元/升（${g.p92Diff >= 0 ? '+' : ''}${g.p92Diff}），95#从${g.start.p95.toFixed(2)}涨至${g.end.p95.toFixed(2)}元/升（${g.p95Diff >= 0 ? '+' : ''}${g.p95Diff}），0#柴油从${g.start.pDiesel.toFixed(2)}涨至${g.end.pDiesel.toFixed(2)}元/升（${g.pDieselDiff >= 0 ? '+' : ''}${g.pDieselDiff}）。`;
+      body = `${city}92#从${g.ref.p92.toFixed(2)}涨至${g.end.p92.toFixed(2)}元/升（${g.p92Diff >= 0 ? '+' : ''}${g.p92Diff.toFixed(2)}），95#从${g.ref.p95.toFixed(2)}涨至${g.end.p95.toFixed(2)}元/升（${g.p95Diff >= 0 ? '+' : ''}${g.p95Diff.toFixed(2)}），0#柴油从${g.ref.pDiesel.toFixed(2)}涨至${g.end.pDiesel.toFixed(2)}元/升（${g.pDieselDiff >= 0 ? '+' : ''}${g.pDieselDiff.toFixed(2)}）。`;
       if (g.gasSum >= 500) {
         body += `本轮段累计上调${g.gasSum}元/吨，幅度较大。`;
       }
       body += `以50升油箱计算，加满92#多花约${Math.round(Math.abs(g.p92Diff) * 50)}元。`;
     } else {
-      body = `${city}92#从${g.start.p92.toFixed(2)}降至${g.end.p92.toFixed(2)}元/升（${g.p92Diff}），95#从${g.start.p95.toFixed(2)}降至${g.end.p95.toFixed(2)}元/升（${g.p95Diff}），0#柴油从${g.start.pDiesel.toFixed(2)}降至${g.end.pDiesel.toFixed(2)}元/升（${g.pDieselDiff}）。`;
+      body = `${city}92#从${g.ref.p92.toFixed(2)}降至${g.end.p92.toFixed(2)}元/升（${g.p92Diff >= 0 ? '+' : ''}${g.p92Diff.toFixed(2)}），95#从${g.ref.p95.toFixed(2)}降至${g.end.p95.toFixed(2)}元/升（${g.p95Diff >= 0 ? '+' : ''}${g.p95Diff.toFixed(2)}），0#柴油从${g.ref.pDiesel.toFixed(2)}降至${g.end.pDiesel.toFixed(2)}元/升（${g.pDieselDiff >= 0 ? '+' : ''}${g.pDieselDiff.toFixed(2)}）。`;
       if (Math.abs(g.gasSum) >= 500) {
         body += `本轮段累计下调${Math.abs(g.gasSum)}元/吨，降幅显著。`;
       }
