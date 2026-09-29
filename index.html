@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>国内成品油价格趋势 · 济南站</title>
-  <meta name="description" content="追踪济南地区92#/95#/98#汽油及0#柴油每日价格走势，最新调价动态与历史数据对比分析，数据来源国家发展和改革委员会。" />
+  <meta name="description" content="以95#汽油为主线，追踪济南地区95#/92#/98#汽油及0#柴油价格走势，最新调价动态与历史数据对比分析，数据来源国家发展和改革委员会。" />
   <meta property="og:title" content="国内成品油价格趋势 · 济南站" />
-  <meta property="og:description" content="追踪济南地区92#/95#/98#汽油及0#柴油每日价格走势，最新调价动态。" />
+  <meta property="og:description" content="以95#汽油为主线，追踪济南地区成品油价格走势与最新调价动态。" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://ToniaXuu.github.io/fuel-price-tracker/" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -31,7 +31,7 @@
     "@context": "https://schema.org",
     "@type": "Dataset",
     "name": "国内成品油价格趋势 · 济南站",
-    "description": "追踪济南地区92#/95#/98#汽油及0#柴油价格调整记录与走势分析",
+    "description": "以95#汽油为主线，追踪济南地区成品油价格调整记录与走势分析",
     "url": "https://ToniaXuu.github.io/fuel-price-tracker/",
     "keywords": ["油价", "成品油", "汽油", "柴油", "济南", "调价"],
     "creator": {
@@ -87,12 +87,22 @@
       --accent-text: #2563eb;
       --flat-fg: #92400e;
 
-      /* ---- 数据系列色（图表 + 价格卡边框同源；--ser-diesel 兼作中性强调色）---- */
-      --ser-92: #3b82f6;
+      /* ---- 数据系列色（图表 + 价格卡边框同源；--ser-diesel 兼作中性强调色）----
+         95# 是主油品，独占高饱和紫；其余三色刻意压低饱和，避免抢视觉。 */
+      --ser-92: #64748b;
       --ser-95: #8b5cf6;
-      --ser-98: #0d9488;
-      --ser-diesel: #475569;
-      --ser-yoy: #94a3b8;
+      --ser-98: #0ea5a4;
+      --ser-diesel: #94a3b8;
+      --ser-yoy: #cbd5e1;
+
+      /* ---- 主油品强调色（95#）---- */
+      --primary: var(--ser-95);
+      --primary-strong: #7c3aed;
+      --primary-soft: #f5f3ff;
+      --primary-ring: color-mix(in srgb, var(--ser-95) 22%, transparent);
+      --primary-glow: color-mix(in srgb, var(--ser-95) 18%, transparent);
+      /* 主卡渐变：极淡的紫到白，和白卡背景拉开层级 */
+      --primary-card-bg: linear-gradient(160deg, #faf8ff 0%, var(--card) 62%);
 
       /* ---- 结构性表面 ---- */
       --th-bg: #f8fafc;
@@ -116,6 +126,21 @@
       --hero-text: rgba(255,255,255,.62);
       --hero-text-dim: rgba(255,255,255,.55);
       --footer-text: rgba(255,255,255,.6);
+      /* 真实济南头图（大明湖超然楼夜景，本地资源，无外链依赖）。
+         webp 优先，不支持时由 <picture> 回退 jpg。 */
+      --hero-photo: url('./hero-jinan.webp');
+      /* 压暗遮罩：两端重、中间轻（文字压在中间），底部再加一道过渡接住内容区。
+         之前写成「左重右轻」的均匀压暗，把照片压成了一团黑 —— 灯楼完全看不出来，
+         用真实照片就失去意义了。 */
+      --hero-scrim:
+        linear-gradient(180deg,
+          rgba(6,10,22,.72) 0%,
+          rgba(6,10,22,.34) 22%,
+          rgba(6,10,22,.26) 46%,
+          rgba(6,10,22,.52) 72%,
+          rgba(6,10,22,.88) 100%),
+        radial-gradient(ellipse 78% 62% at 50% 44%,
+          rgba(6,10,22,.60) 0%, rgba(6,10,22,.34) 55%, rgba(6,10,22,.06) 100%);
 
       /* ---- 悬浮控件（固定压在半透明深底上，两主题共用一套亮色）---- */
       --toggle-bg: rgba(15,23,42,.55);
@@ -191,18 +216,45 @@
       background: var(--hero-bg);
       padding: 80px 20px 70px;
       overflow: hidden;
-      min-height: 520px;
+      min-height: 560px;
       display: flex; align-items: center;
+    }
+    /* 真实济南照片层：独立元素而非 background-image，
+       这样加载失败时可以直接整层隐藏，干净地退回渐变底色。
+       <picture> + <img> 而非 background：能吃到 webp 回退、懒加载与 decode 控制 */
+    .hero-photo {
+      position: absolute; inset: 0;
+      opacity: 0;
+      transition: opacity 1.2s ease-out;
+      overflow: hidden;
+    }
+    .hero-photo.loaded { opacity: 1; }
+    .hero-photo img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center 62%;
+      display: block;
+      transform: scale(1.04);
+      animation: heroZoom 24s ease-in-out infinite alternate;
+    }
+    @keyframes heroZoom {
+      0%   { transform: scale(1.04) translateX(0); }
+      100% { transform: scale(1.12) translateX(-1.2%); }
+    }
+    /* 遮罩层：照片之上的可读性保障 */
+    .hero-scrim {
+      position: absolute; inset: 0;
+      background: var(--hero-scrim);
     }
     .hero::before {
       content: '';
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(circle at 20% 30%, rgba(59,130,246,.25) 0%, transparent 55%),
-        radial-gradient(circle at 80% 70%, rgba(139,92,246,.2) 0%, transparent 50%),
-        radial-gradient(circle at 50% 50%, rgba(236,72,153,.12) 0%, transparent 60%);
+        radial-gradient(circle at 20% 30%, color-mix(in srgb, var(--primary) 22%, transparent) 0%, transparent 55%),
+        radial-gradient(circle at 80% 70%, rgba(59,130,246,.16) 0%, transparent 50%);
       animation: heroGlow 8s ease-in-out infinite alternate;
+      z-index: 1;
     }
     @keyframes heroGlow {
       0%   { opacity: 0.8; }
@@ -210,9 +262,10 @@
     }
     .hero-oil-drop {
       position: absolute; bottom: -28px; border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg); opacity: 0.15; pointer-events: none;
+      transform: rotate(-45deg); opacity: 0.13; pointer-events: none;
       animation: dropBounce 3s ease-in-out infinite;
       background: var(--brand-gradient-135);
+      z-index: 1;
     }
     .hero-oil-drop:nth-child(1) { left: 8%; animation-delay: 0s; }
     .hero-oil-drop:nth-child(2) { left: 28%; animation-delay: 0.7s; }
@@ -228,7 +281,7 @@
       max-width: 900px;
       margin: 0 auto;
       text-align: center;
-      z-index: 1;
+      z-index: 2;
     }
     .hero-badge {
       display: inline-flex; align-items: center; gap: 6px;
@@ -261,6 +314,8 @@
       letter-spacing: -.02em;
       margin-bottom: 16px;
       animation: fadeInUp .7s .1s ease-out both;
+      /* 照片层比纯色底亮，给文字加投影兜住对比度 */
+      text-shadow: 0 2px 16px rgba(4,8,18,.75), 0 1px 3px rgba(4,8,18,.6);
     }
     .hero h1 .city {
       background: var(--brand-gradient-text);
@@ -270,10 +325,11 @@
     }
     .hero p {
       font-size: 16px;
-      color: var(--hero-text);
+      color: rgba(255,255,255,.8);
       max-width: 580px;
       margin: 0 auto 36px;
       animation: fadeInUp .7s .2s ease-out both;
+      text-shadow: 0 1px 10px rgba(4,8,18,.7);
     }
 
     @keyframes fadeInUp {
@@ -312,6 +368,18 @@
       font-size: 12px; color: var(--hero-text-dim);
       margin-top: 6px;
     }
+    /* 主油品（95#）那张卡：紫边 + 更亮的底 + 略大字号 */
+    .hero-stat.is-primary {
+      background: color-mix(in srgb, var(--ser-95) 20%, rgba(255,255,255,.06));
+      border-color: color-mix(in srgb, var(--ser-95) 55%, transparent);
+      box-shadow: 0 8px 28px color-mix(in srgb, var(--ser-95) 22%, transparent);
+    }
+    .hero-stat.is-primary:hover {
+      background: color-mix(in srgb, var(--ser-95) 28%, rgba(255,255,255,.08));
+      box-shadow: 0 12px 34px color-mix(in srgb, var(--ser-95) 32%, transparent);
+    }
+    .hero-stat.is-primary .val { font-size: 34px; }
+    .hero-stat.is-primary .lab { color: rgba(255,255,255,.8); }
 
     /* ===== CONTAINER ===== */
     .container { max-width: 1140px; margin: 0 auto; padding: 48px 20px 80px; position: relative; z-index: 1; }
@@ -334,6 +402,17 @@
       letter-spacing: -.01em;
     }
     .section-title .ic { color: var(--blue); }
+    /* 主油品标题：图标换紫，右侧带主油品小标签 */
+    .section-title.is-primary .ic { color: var(--ser-95); }
+    .title-tag {
+      font-size: 11px; font-weight: 700;
+      color: var(--primary-strong);
+      background: var(--primary-soft);
+      border: 1px solid color-mix(in srgb, var(--ser-95) 28%, transparent);
+      padding: 2px 9px; border-radius: 999px;
+      letter-spacing: .04em;
+      margin-left: 2px;
+    }
 
     /* ---- 当前油价标题行 ---- */
     .price-head {
@@ -435,14 +514,33 @@
     .qstat .unit { font-size: 13px; font-weight: 400; color: var(--sub); margin-left: 2px; }
     .qstat .suffix { font-size: 12px; color: var(--sub); margin-top: 4px; }
 
-    /* ===== CURRENT PRICES ===== */
+    /* ===== CURRENT PRICES =====
+       布局：95# 主卡跨列做大，其余三张挤在右侧作对照。
+       ≤1100px 降为两列、≤640px 单列，主卡始终排第一。 */
     .price-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: 1.9fr 1fr;
       gap: 16px;
       margin-bottom: 8px;
     }
-    @media (max-width: 768px) { .price-grid { grid-template-columns: repeat(2, 1fr); } }
+    /* 主卡占 2×2，右侧三张各自 1×1 */
+    .price-grid { grid-template-areas: "pri a" "pri b" "pri c"; }
+    .price-cell.is-primary { grid-area: pri; }
+    .price-cell:not(.is-primary):nth-of-type(2) { grid-area: a; }
+    .price-cell:not(.is-primary):nth-of-type(3) { grid-area: b; }
+    .price-cell:not(.is-primary):nth-of-type(4) { grid-area: c; }
+    @media (max-width: 1100px) {
+      .price-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-areas: "pri pri" "a b" "c c";
+      }
+    }
+    @media (max-width: 640px) {
+      .price-grid {
+        grid-template-columns: 1fr;
+        grid-template-areas: "pri" "a" "b" "c";
+      }
+    }
     .price-cell {
       background: var(--bg);
       border-radius: 14px;
@@ -450,6 +548,8 @@
       text-align: center;
       border: 1px solid var(--border);
       transition: var(--transition);
+      display: flex; flex-direction: column; justify-content: center;
+      position: relative;
     }
     .price-cell:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
     .price-cell .p-label { font-size: 11px; color: var(--sub); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
@@ -457,10 +557,54 @@
     .price-cell .p-change { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
     .price-cell .p-change.up   { color: var(--up-text); }
     .price-cell .p-change.down { color: var(--down-text); }
-    .price-cell:nth-child(1) { border-top: 3px solid var(--ser-92);     transition-delay: 0s; }
-    .price-cell:nth-child(2) { border-top: 3px solid var(--ser-95);     transition-delay: .1s; }
-    .price-cell:nth-child(3) { border-top: 3px solid var(--ser-98);     transition-delay: .2s; }
-    .price-cell:nth-child(4) { border-top: 3px solid var(--ser-diesel); transition-delay: .3s; }
+
+    /* ---- 主卡（95#）---- */
+    .price-cell.is-primary {
+      background: var(--primary-card-bg);
+      border: 1px solid color-mix(in srgb, var(--ser-95) 34%, var(--border));
+      border-top: 4px solid var(--ser-95);
+      box-shadow: 0 10px 34px var(--primary-glow);
+      padding: 26px 24px;
+      align-items: center;
+    }
+    .price-cell.is-primary:hover {
+      box-shadow: 0 16px 44px var(--primary-ring);
+      transform: translateY(-4px);
+    }
+    .price-cell.is-primary .p-label {
+      font-size: 13px; font-weight: 700;
+      color: var(--primary-strong);
+      letter-spacing: .08em;
+      margin-bottom: 12px;
+    }
+    .price-cell.is-primary .p-value {
+      font-size: clamp(52px, 7vw, 68px);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -.03em;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    .price-cell.is-primary .p-change { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+    .price-cell.is-primary .p-change.up   { color: var(--up-text); }
+    .price-cell.is-primary .p-change.down { color: var(--down-text); }
+    .price-cell.is-primary .p-ribbon {
+      position: absolute; top: 14px; right: 14px;
+      background: var(--ser-95); color: #fff;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .1em;
+      padding: 3px 10px; border-radius: 999px;
+      box-shadow: 0 3px 10px var(--primary-ring);
+    }
+    .price-cell.is-primary .p-note {
+      font-size: 11px; color: var(--sub);
+      padding-top: 12px;
+      border-top: 1px dashed color-mix(in srgb, var(--ser-95) 30%, transparent);
+      width: 100%; text-align: center;
+    }
+
+    /* 非主卡：色条细一点、降权 */
+    .price-cell:not(.is-primary) .p-value { font-size: 24px; }
 
     /* ===== CHART AREA ===== */
     .chart-wrap { position: relative; height: 480px; }
@@ -512,6 +656,16 @@
     .data-table tbody tr { border-bottom: 1px solid var(--row-border); transition: background .2s; }
     .data-table tbody tr:hover { background: var(--row-hover); }
     .data-table tbody td { padding: 11px 14px; font-variant-numeric: tabular-nums; }
+    /* 表中 95#（主油品）列：整列轻微着色，一眼定位 */
+    .data-table thead th.th-primary {
+      color: var(--primary-strong);
+      background: color-mix(in srgb, var(--ser-95) 10%, var(--th-bg));
+    }
+    .data-table tbody td.td-primary {
+      font-weight: 800;
+      color: var(--primary-strong);
+      background: color-mix(in srgb, var(--ser-95) 7%, transparent);
+    }
     .badge {
       display: inline-block;
       padding: 3px 12px;
@@ -732,7 +886,11 @@
         --red-light: #2e1414; --green-light: #0f3323; --amber-light: #3d2e14;
         --up-text: #f87171; --down-text: #34d399; --flat-text: #fbbf24;
         --accent-text: #93c5fd; --flat-fg: #fbbf24;
-        --ser-92: #60a5fa; --ser-95: #a78bfa; --ser-98: #2dd4bf; --ser-diesel: #94a3b8; --ser-yoy: #64748b;
+        --ser-92: #94a3b8; --ser-95: #a78bfa; --ser-98: #2dd4bf; --ser-diesel: #64748b; --ser-yoy: #475569;
+        --primary: #a78bfa; --primary-strong: #c4b5fd; --primary-soft: #2a2140;
+        --primary-ring: color-mix(in srgb, #a78bfa 30%, transparent);
+        --primary-glow: color-mix(in srgb, #a78bfa 20%, transparent);
+        --primary-card-bg: linear-gradient(160deg, #241d3c 0%, var(--card) 62%);
         --th-bg: #1a2332; --row-border: #2a3a52; --row-hover: #24334a;
         --scroll-thumb: #475569; --sk-1: #2b3a52; --sk-2: #354763;
         --dot-ring: #0f172a; --tl-line-a: #1d4ed8; --tl-line-b: #334155;
@@ -756,7 +914,11 @@
       --red-light: #2e1414; --green-light: #0f3323; --amber-light: #3d2e14;
       --up-text: #f87171; --down-text: #34d399; --flat-text: #fbbf24;
       --accent-text: #93c5fd; --flat-fg: #fbbf24;
-      --ser-92: #60a5fa; --ser-95: #a78bfa; --ser-98: #2dd4bf; --ser-diesel: #94a3b8; --ser-yoy: #64748b;
+      --ser-92: #94a3b8; --ser-95: #a78bfa; --ser-98: #2dd4bf; --ser-diesel: #64748b; --ser-yoy: #475569;
+      --primary: #a78bfa; --primary-strong: #c4b5fd; --primary-soft: #2a2140;
+      --primary-ring: color-mix(in srgb, #a78bfa 30%, transparent);
+      --primary-glow: color-mix(in srgb, #a78bfa 20%, transparent);
+      --primary-card-bg: linear-gradient(160deg, #241d3c 0%, var(--card) 62%);
       --th-bg: #1a2332; --row-border: #2a3a52; --row-hover: #24334a;
       --scroll-thumb: #475569; --sk-1: #2b3a52; --sk-2: #354763;
       --dot-ring: #0f172a; --tl-line-a: #1d4ed8; --tl-line-b: #334155;
@@ -912,6 +1074,13 @@
 
 <!-- HERO -->
 <section class="hero">
+  <div class="hero-photo" id="heroPhoto">
+    <picture>
+      <source srcset="./hero-jinan.webp" type="image/webp" />
+      <img src="./hero-jinan.jpg" alt="" aria-hidden="true" decoding="async" fetchpriority="high" />
+    </picture>
+  </div>
+  <div class="hero-scrim"></div>
   <span class="hero-oil-drop" style="left:8%;width:38px;height:38px;animation-delay:0s"></span>
   <span class="hero-oil-drop" style="left:28%;width:28px;height:28px;animation-delay:0.7s"></span>
   <span class="hero-oil-drop" style="left:58%;width:44px;height:44px;animation-delay:1.4s"></span>
@@ -921,7 +1090,7 @@
       <span class="dot"></span> 数据实时同步 · 国家发展和改革委员会
     </div>
     <h1>国内成品油价格趋势<br><span class="city" id="heroCity">济南站</span> · <span id="currentYear"></span>年度报告</h1>
-    <p>追踪<span id="heroCityName">济南</span>地区 92# · 95# · 98# 汽油及 0# 柴油全年调价轨迹，深度解析油价波动对市民生活出行的实际影响。</p>
+    <p>追踪<span id="heroCityName">济南</span>地区 95# 汽油全年调价轨迹，同步记录 92# · 98# 汽油及 0# 柴油，深度解析油价波动对市民生活出行的实际影响。</p>
     <div class="hero-stats">
       <div class="hero-stat">
         <div class="val" id="hero-rounds">-</div>
@@ -935,7 +1104,7 @@
         <div class="val is-down" id="hero-downs">-</div>
         <div class="lab">下调</div>
       </div>
-      <div class="hero-stat">
+      <div class="hero-stat is-primary">
         <div class="val is-amber" id="hero-cumulative">-</div>
         <div class="lab">95#累计涨跌（元/升）</div>
       </div>
@@ -948,21 +1117,24 @@
   <!-- ========== 当前油价 ========== -->
   <div class="reveal">
     <div class="price-head">
-      <div class="section-title" id="currentPriceTitle">
+      <div class="section-title is-primary" id="currentPriceTitle">
         <svg class="ic" aria-hidden="true"><use href="#i-pin" /></svg><span id="currentPriceText">油价加载中…</span>
       </div>
       <span class="trend-badge" id="priceTrendBadge">加载中</span>
     </div>
     <div class="price-grid" id="priceGrid">
+      <!-- 95# 主油品：跨列大卡，尺寸/配色均高于其余三张 -->
+      <div class="price-cell is-primary reveal">
+        <div class="p-ribbon">主油品</div>
+        <div class="p-label">95# 汽油</div>
+        <div class="p-value counter skeleton" id="counter95" data-target="0" data-prefix="" data-suffix="">--</div>
+        <div class="p-change skeleton" id="change95">—</div>
+        <div class="p-note" id="p95Note">济南多数家用车加注标号</div>
+      </div>
       <div class="price-cell reveal">
         <div class="p-label">92# 汽油</div>
         <div class="p-value counter skeleton" id="counter92" data-target="0" data-prefix="" data-suffix="">--</div>
         <div class="p-change skeleton" id="change92">—</div>
-      </div>
-      <div class="price-cell reveal">
-        <div class="p-label">95# 汽油</div>
-        <div class="p-value counter skeleton" id="counter95" data-target="0" data-prefix="" data-suffix="">--</div>
-        <div class="p-change skeleton" id="change95">—</div>
       </div>
       <div class="price-cell reveal">
         <div class="p-label">98# 汽油</div>
@@ -980,27 +1152,27 @@
   <!-- ========== 快速统计 ========== -->
   <div class="quick-stats reveal">
     <div class="qstat neutral">
-      <div class="label">92# 年内峰值</div>
+      <div class="label">95# 年内峰值</div>
       <div class="value"><span class="counter" id="statPeak" data-target="0" data-prefix="¥" data-suffix="">0.00</span></div>
       <div class="suffix" id="statPeakDate">—</div>
     </div>
     <div class="qstat neutral">
-      <div class="label">92# 年初基准价</div>
+      <div class="label">95# 年初基准价</div>
       <div class="value"><span class="counter" id="statBase" data-target="0" data-prefix="¥" data-suffix="">0.00</span></div>
       <div class="suffix" id="statBaseDate">—</div>
     </div>
     <div class="qstat neutral">
-      <div class="label">年初至今振幅</div>
+      <div class="label">95# 年初至今振幅</div>
       <div class="value"><span class="counter" id="statAmplitude" data-target="0" data-prefix="¥" data-suffix="">0.00</span></div>
       <div class="suffix" id="statAmplitudeRange">—</div>
     </div>
     <div class="qstat down" id="statRecentCard">
-      <div class="label" id="statRecentLabel">最近变动</div>
+      <div class="label" id="statRecentLabel">95# 最近变动</div>
       <div class="value"><span class="counter" id="statRecent" data-target="0" data-prefix="¥" data-suffix="">0.00</span></div>
       <div class="suffix" id="statRecentDesc">—</div>
     </div>
     <div class="qstat neutral" id="statYoYCard">
-      <div class="label">92# 较去年同月</div>
+      <div class="label">95# 较去年同月</div>
       <div class="value"><span class="counter" id="statYoY" data-target="0" data-prefix="¥" data-suffix="">--</span></div>
       <div class="suffix" id="statYoYDesc">—</div>
     </div>
@@ -1008,7 +1180,7 @@
 
   <!-- ========== 趋势图 ========== -->
   <div class="card reveal">
-    <div class="section-title"><svg class="ic" aria-hidden="true"><use href="#i-trend" /></svg>济南成品油零售价格走势（元/升）</div>
+    <div class="section-title is-primary"><svg class="ic" aria-hidden="true"><use href="#i-trend" /></svg>济南成品油零售价格走势（元/升）<span class="title-tag">主线 = 95#</span></div>
     <div class="chart-wrap"><div id="mainChart" style="width:100%;height:100%"></div></div>
   </div>
 
@@ -1026,8 +1198,7 @@
 
   <!-- ========== 数据表格 ========== -->
   <div class="card reveal">
-    <div class="section-title" id="tableSectionTitle"><svg class="ic" aria-hidden="true"><use href="#i-list" /></svg><span id="tableSectionText">全部调价记录</span></div>
-    <div class="tbl-wrap">
+    <div class="section-title" id="tableSectionTitle"><svg class="ic" aria-hidden="true"><use href="#i-list" /></svg><span id="tableSectionText">全部调价记录</span></div>    <div class="tbl-wrap">
       <table class="data-table">
         <thead>
           <tr>
@@ -1035,11 +1206,11 @@
             <th>调价日期</th>
             <th>趋势</th>
             <th>汽油<span class="th-sub">元/吨</span></th>
+            <th class="th-primary">95#<span class="th-sub">元/升</span></th>
             <th>92#<span class="th-sub">元/升</span></th>
-            <th>95#<span class="th-sub">元/升</span></th>
             <th>98#<span class="th-sub">元/升</span></th>
             <th>0#柴油<span class="th-sub">元/升</span></th>
-            <th>92#累计<span class="th-sub">Δ元/升</span></th>
+            <th class="th-primary">95#累计<span class="th-sub">Δ元/升</span></th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -1049,7 +1220,7 @@
 
   <!-- ========== 时间轴影响分析 ========== -->
   <div class="card reveal">
-    <div class="section-title"><svg class="ic" aria-hidden="true"><use href="#i-clock" /></svg>分段影响分析</div>
+    <div class="section-title is-primary"><svg class="ic" aria-hidden="true"><use href="#i-clock" /></svg>分段影响分析<span class="title-tag">以 95# 为准</span></div>
     <div class="callout">
       <div class="callout-icon"><svg class="ic" aria-hidden="true"><use href="#i-bulb" /></svg></div>
       <div class="callout-text">
@@ -1068,14 +1239,14 @@
       <div class="ic-icon"><svg class="ic" aria-hidden="true"><use href="#i-car" /></svg></div>
       <div class="ic-title">私家车主 · 日常通勤</div>
       <div class="ic-body" id="icBody1">
-        以济南经十路通勤族为例：Q1五连涨后月度油费飙升近<span class="ic-dyn" id="icPeakCost">—</span>元；近期调价后月均油费约<span class="ic-dyn" id="icCurrentCost">—</span>元。全年油费波动幅度超<span class="ic-dyn" id="icAmpCost">—</span>元/月，高位期间不少车主选择拼车或临时换乘BRT。
+        以济南经十路通勤族为例（<strong>按 95# 计</strong>）：Q1五连涨后月度油费飙升近<span class="ic-dyn" id="icPeakCost">—</span>元；近期调价后月均油费约<span class="ic-dyn" id="icCurrentCost">—</span>元。全年油费波动幅度超<span class="ic-dyn" id="icAmpCost">—</span>元/月，高位期间不少车主选择拼车或临时换乘BRT。
       </div>
     </div>
     <div class="impact-card n2 reveal">
       <div class="ic-icon"><svg class="ic" aria-hidden="true"><use href="#i-scooter" /></svg></div>
       <div class="ic-title">网约车 · 外卖配送</div>
       <div class="ic-body" id="icBody2">
-        高油价期间网约车燃油附加费上调，全职网约车司机月增油费约<span class="ic-dyn" id="icDriverCost">—</span>元，部分司机选择错峰出车降低空驶率。油价回落后附加费逐步回调。
+        高油价期间网约车燃油附加费上调，全职网约车司机月增油费约<span class="ic-dyn" id="icDriverCost">—</span>元（95#），部分司机选择错峰出车降低空驶率。油价回落后附加费逐步回调。
       </div>
     </div>
     <div class="impact-card n3 reveal">
@@ -1126,6 +1297,28 @@
 // 国内成品油价格趋势 · 动态数据驱动
 // 数据来源: data.json（由 GitHub Actions 自动更新）
 // ================================================================
+
+// ============ Hero 真实济南照片 ============
+// 本地资源（hero-jinan.webp / .jpg），不依赖任何外链。
+// 只有图片真正 decode 成功才给容器加 .loaded 做淡入 —— 万一文件缺失，
+// 白字压在无遮罩的浅色渐变上也能读，不会出现半透明的破图。
+(function heroPhoto() {
+  const wrap = document.getElementById('heroPhoto');
+  if (!wrap) return;
+  const img = wrap.querySelector('img');
+  if (!img) return;
+
+  const reveal = () => wrap.classList.add('loaded');
+  img.addEventListener('load', () => {
+    // decode() 确保像素已就绪再淡入，避免淡入过程中出现未解码的空白
+    if (img.decode) img.decode().then(reveal).catch(reveal);
+    else reveal();
+  });
+  img.addEventListener('error', () => { wrap.style.display = 'none'; });
+
+  // 图片可能在脚本执行前就已加载完（缓存命中 / 本地秒开）
+  if (img.complete && img.naturalWidth > 0) reveal();
+})();
 
 // ============ 浮动粒子（不依赖数据，提前渲染）============
 (function particles() {
@@ -1215,8 +1408,12 @@ function signedNum(v) {
 }
 
 // ============ 内嵌回退数据（data.json加载失败时使用）============
+// ⚠️ 这里只需保证「字段齐全 + 能渲染」，不必与线上逐年同步；
+// 正常情况一律以 data.json 为准。
 const FALLBACK_DATA = {
-  "meta": { "year":2026, "lastUpdated":"2026-07-31", "city":"济南", "province":"山东", "basePrice92":6.67, "base95":7.16 },
+  "meta": { "year":2026, "lastUpdated":"2026-09-24", "city":"济南", "province":"山东",
+            "basePrice92":6.67, "basePrice95":7.16, "basePrice98":8.16, "basePriceDiesel":6.26,
+            "primary":"p95" },
   "prices2026": [
     {"round":1,"date":"2026-01-06","type":"flat","gas":0,"diesel":0,"p92":6.67,"p95":7.16,"p98":8.16,"pDiesel":6.26},
     {"round":2,"date":"2026-01-20","type":"up","gas":85,"diesel":85,"p92":6.74,"p95":7.23,"p98":8.23,"pDiesel":6.33},
@@ -1234,21 +1431,10 @@ const FALLBACK_DATA = {
     {"round":14,"date":"2026-07-17","type":"up","gas":300,"diesel":290,"p92":7.39,"p95":7.92,"p98":9.38,"pDiesel":7.04},
     {"round":15,"date":"2026-07-31","type":"up","gas":685,"diesel":655,"p92":7.94,"p95":8.51,"p98":10.00,"pDiesel":7.57}
   ],
-  // 2025年同期参考数据（按对应日期匹配，用于同比线）
-  "prices2025": [
-    {"date":"2026-01-06","p92":6.50,"p95":6.98,"p98":7.98,"pDiesel":6.10},
-    {"date":"2026-01-20","p92":6.55,"p95":7.03,"p98":8.03,"pDiesel":6.15},
-    {"date":"2026-02-03","p92":6.78,"p95":7.28,"p98":8.28,"pDiesel":6.38},
-    {"date":"2026-02-24","p92":6.88,"p95":7.38,"p98":8.38,"pDiesel":6.48},
-    {"date":"2026-03-09","p92":7.02,"p95":7.53,"p98":8.53,"pDiesel":6.62},
-    {"date":"2026-03-23","p92":7.25,"p95":7.78,"p98":8.78,"pDiesel":6.85},
-    {"date":"2026-04-07","p92":7.45,"p95":7.98,"p98":8.98,"pDiesel":7.05},
-    {"date":"2026-04-21","p92":7.20,"p95":7.72,"p98":8.72,"pDiesel":6.80},
-    {"date":"2026-05-08","p92":7.35,"p95":7.88,"p98":8.88,"pDiesel":6.95},
-    {"date":"2026-05-21","p92":7.40,"p95":7.93,"p98":8.93,"pDiesel":7.00},
-    {"date":"2026-06-04","p92":7.12,"p95":7.63,"p98":8.63,"pDiesel":6.72},
-    {"date":"2026-06-18","p92":6.95,"p95":7.45,"p98":8.45,"pDiesel":6.55}
-  ]
+  // ⚠️ prices2025 已移除：原先这里装的其实是 2026 年 1~7 月的陈旧副本（日期同为 2026），
+  //    「较去年同月」实际算成了「9 月对比 7 月」。没有真实的 2025 同期数据就不放，
+  //    页面会自动把同比卡片显示成 —（见 init() 里的年份闸门）。
+  "prices2025": []
 };
 let dataLoadFailed = false;
 let retryBtnAdded = false;
@@ -1269,9 +1455,29 @@ async function init() {
 
     const meta = raw.meta;
     const prices = raw.prices2026 || raw.prices; // 兼容新旧格式
-    const prices2025 = raw.prices2025 || null;
     const last = prices[prices.length - 1];
-    const baseL92 = meta.basePrice92;
+    // 主油品 = 95#。全站指标（峰值/振幅/累计/同比/连涨连降）统一走这一路，
+    // 想换主油品只需改 meta.primary，其余代码不用动。
+    const PRIMARY = 'p95';
+    const PRIMARY_LABEL = '95#';
+    // 基准价：受控字段 → 首条记录 → meta 旧字段（三重兜底，保证旧 data.json 也能跑）
+    const basePrim =
+      meta['basePrice' + PRIMARY.slice(1)] !== undefined ? meta['basePrice' + PRIMARY.slice(1)] :
+      (meta.primary === PRIMARY && meta.basePrice95 !== undefined) ? meta.basePrice95 :
+      prices[0][PRIMARY];
+    const baseL92 = basePrim;
+
+    // 「去年同期」数据必须是**上一年**的 —— 曾有一份 prices2025 装的其实是 2026 年
+    // 1~7 月的陈旧副本（日期同为 2026），页面照单全收，于是「较去年同月」算成了
+    // 「9 月对比 7 月」，同比线也是假的。这里加硬闸：年份 ≥ 本年就整段丢弃，
+    // 宁可卡片显示「—」，也不把错数据当真数据展示。
+    const yoyRaw = raw.prices2025 || null;
+    const prices2025 = (yoyRaw && yoyRaw.length && yoyRaw.every(function (r) {
+      return Number(String(r.date).slice(0, 4)) < Number(meta.year);
+    })) ? yoyRaw : null;
+    if (yoyRaw && yoyRaw.length && !prices2025) {
+      console.warn('[FPT] prices2025 含非上一年数据，已忽略（同比指标将显示 —）');
+    }
 
     // ---- 城市名 ----
     document.getElementById('heroCity').textContent = meta.city + '站';
@@ -1338,18 +1544,18 @@ async function init() {
     setChangeText('change98', diff98);
     setChangeText('changeDiesel', diffDiesel);
 
-    // ---- Quick Stats ----
-    const peak92 = Math.max(...prices.map(d => d.p92));
-    const peakEntry = prices.find(d => d.p92 === peak92);
-    const min92 = Math.min(...prices.map(d => d.p92));
-    const minEntry = prices.find(d => d.p92 === min92);
+    // ---- Quick Stats（全部走主油品 95#）----
+    const peak92 = Math.max(...prices.map(d => d[PRIMARY]));
+    const peakEntry = prices.find(d => d[PRIMARY] === peak92);
+    const min92 = Math.min(...prices.map(d => d[PRIMARY]));
+    const minEntry = prices.find(d => d[PRIMARY] === min92);
     const amplitude = +(peak92 - min92).toFixed(2);
 
     setCounter('statPeak', peak92, 2);
     document.getElementById('statPeakDate').textContent = peakEntry
       ? formatDate(peakEntry.date) + ' 调价后' : '—';
 
-    setCounter('statBase', baseL92, 2);
+    setCounter('statBase', basePrim, 2);
     document.getElementById('statBaseDate').textContent = prices[0]
       ? formatDate(prices[0].date) + (prices[0].type === 'flat' ? ' 搁浅' : '') : '—';
 
@@ -1357,13 +1563,13 @@ async function init() {
     document.getElementById('statAmplitudeRange').textContent =
       '最高 ' + peak92.toFixed(2) + ' → 最低 ' + min92.toFixed(2);
 
-    // 较去年同月
+    // 较去年同月（主油品）
     const yoyEl = document.getElementById('statYoY');
     if (prices2025 && prices2025.length > 0) {
       const last2025 = prices2025[prices2025.length - 1];
-      const yoyDiff = +(last.p92 - last2025.p92).toFixed(2);
+      const yoyDiff = +(last[PRIMARY] - last2025[PRIMARY]).toFixed(2);
       setSignedCounter('statYoY', yoyDiff, 2);
-      document.getElementById('statYoYDesc').textContent = '去年同月 92# ¥' + last2025.p92.toFixed(2);
+      document.getElementById('statYoYDesc').textContent = '去年同月 ' + PRIMARY_LABEL + ' ¥' + last2025[PRIMARY].toFixed(2);
       const yoyCard = document.getElementById('statYoYCard');
       yoyCard.className = 'qstat ' + (yoyDiff > 0 ? 'up' : yoyDiff < 0 ? 'down' : 'neutral');
     } else {
@@ -1371,10 +1577,14 @@ async function init() {
       yoyEl.classList.remove('counter');
       yoyEl.textContent = '—';
     }
-    const recentDowns = detectRecentStreak(prices);
+    const recentDowns = detectRecentStreak(prices, PRIMARY, PRIMARY_LABEL);
     setSignedCounter('statRecent', recentDowns.sum, 2);
     document.getElementById('statRecentLabel').textContent = recentDowns.label;
     document.getElementById('statRecentDesc').textContent = recentDowns.desc;
+    // 涨红跌绿：以前这里只写了值/标签/说明，**漏了把 cssClass 落成 class**
+    // → 卡片永远停在 HTML 里写死的那个状态（曾写死 down），明明是上调也显示绿色。
+    document.getElementById('statRecentCard').className =
+      'qstat ' + (recentDowns.cssClass || 'neutral');
     // 动态调整卡片样式
     const recentCard = document.getElementById('statRecentCard');
     recentCard.className = 'qstat ' + recentDowns.cssClass;
@@ -1383,7 +1593,7 @@ async function init() {
     document.querySelectorAll('.counter').forEach(el => counterObserver.observe(el));
 
     // ---- 渲染表格 ----
-    renderTable(prices, baseL92);
+    renderTable(prices, basePrim, PRIMARY);
 
     // ---- 缓存数据，供主题切换时原地重绘图表 ----
     _chartData = { prices: prices, prices2025: prices2025 };
@@ -1393,7 +1603,7 @@ async function init() {
     renderBarChart(prices);
 
     // ---- 动态生成时间线 ----
-    generateTimeline(prices, meta.city);
+    generateTimeline(prices, meta.city, PRIMARY, PRIMARY_LABEL);
 
     // ---- 启动 Reveal 观察 ----
     document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
@@ -1475,10 +1685,12 @@ function setChangeText(id, diff) {
   }
 }
 
-// ============ 检测最近连续变动 ============
-function detectRecentStreak(prices) {
+// ============ 检测最近连续变动（主油品）============
+function detectRecentStreak(prices, primary, label) {
+  const P = primary || 'p95';
+  const L = label || '95#';
   if (prices.length < 2) {
-    return { sum: 0, label: '最近变动', desc: '数据不足', cssClass: 'neutral' };
+    return { sum: 0, label: L + ' 最近变动', desc: '数据不足', cssClass: 'neutral' };
   }
   const last = prices[prices.length - 1];
   // 从末尾往前找到同类型连续变动
@@ -1493,44 +1705,43 @@ function detectRecentStreak(prices) {
   // 连涨/连降累计 = 末次价 −「本段最开始那一次调价之前」的价。
   // prices[] 存的是「本次调价之后」的价，所以段内首条自身的涨跌基准是它的前一条；
   // 若拿 streak[0] 自己当基准，会把段内第一条的涨跌整段漏掉，少算一格。
-  // （实测 r13=7.15 → r14=7.39 → r15=7.94：正确 0.79，旧写法只给出 0.55）
   const baseIdx = prices.length - streak.length - 1;
-  const baseP92 = baseIdx >= 0 ? prices[baseIdx].p92 : prices[0].p92;
-  const signedSum = +(last.p92 - baseP92).toFixed(2);
+  const baseP = baseIdx >= 0 ? prices[baseIdx][P] : prices[0][P];
+  const signedSum = +(last[P] - baseP).toFixed(2);
 
   if (streak.length >= 2 && last.type === 'down') {
     return {
       sum: signedSum,
-      label: streak.length + '连降累计',
-      desc: '92#；' + streak.map(d => formatDate(d.date)).join('+') + '合计',
+      label: L + ' ' + streak.length + '连降累计',
+      desc: streak.map(d => formatDate(d.date)).join('+') + '合计',
       cssClass: 'down'
     };
   } else if (streak.length >= 2 && last.type === 'up') {
     return {
       sum: signedSum,
-      label: streak.length + '连涨累计',
-      desc: '92#；' + streak.map(d => formatDate(d.date)).join('+') + '合计',
+      label: L + ' ' + streak.length + '连涨累计',
+      desc: streak.map(d => formatDate(d.date)).join('+') + '合计',
       cssClass: 'up'
     };
   }
   // 单次变动
-  const diff = +(last.p92 - (prices.length >= 2 ? prices[prices.length - 2].p92 : last.p92)).toFixed(2);
+  const diff = +(last[P] - (prices.length >= 2 ? prices[prices.length - 2][P] : last[P])).toFixed(2);
   return {
     sum: diff,
-    label: last.type === 'up' ? '上调' : last.type === 'down' ? '下调' : '变动',
-    desc: '92# ' + formatDate(last.date),
+    label: L + (last.type === 'up' ? ' 上调' : last.type === 'down' ? ' 下调' : ' 变动'),
+    desc: formatDate(last.date),
     cssClass: last.type === 'up' ? 'up' : last.type === 'down' ? 'down' : 'neutral'
   };
 }
 
-// ============ 渲染数据表格 ============
-function renderTable(prices, baseL92) {
+// ============ 渲染数据表格（列序：95# 靠前并高亮，累计列走主油品）============
+function renderTable(prices, basePrim, primary) {
+  const P = primary || 'p95';
   const tbody = document.getElementById('tableBody');
   const typeMap = { up: '上调', down: '下调', flat: '搁浅' };
   tbody.innerHTML = prices.map(d => {
     const gasStr = d.gas !== 0 ? signedNum(d.gas) : '—';
-    const dieselStr = d.diesel !== 0 ? signedNum(d.diesel) : '—';
-    const cum = +(d.p92 - baseL92).toFixed(2);
+    const cum = +(d[P] - basePrim).toFixed(2);
     const cumStr = cum >= 0 ? '+' + cum.toFixed(2) : cum.toFixed(2);
     const gasColor = d.gas > 0 ? 'var(--up-text)' : d.gas < 0 ? 'var(--down-text)' : 'var(--flat-text)';
     const cumColor = cum > 0 ? 'var(--up-text)' : cum < 0 ? 'var(--down-text)' : 'var(--sub)';
@@ -1539,8 +1750,8 @@ function renderTable(prices, baseL92) {
       <td><strong>${formatDate(d.date)}</strong></td>
       <td><span class="badge ${d.type}">${typeMap[d.type]}</span></td>
       <td style="font-weight:700;color:${gasColor}">${gasStr}</td>
+      <td class="td-primary">${d.p95.toFixed(2)}</td>
       <td>${d.p92.toFixed(2)}</td>
-      <td>${d.p95.toFixed(2)}</td>
       <td>${d.p98.toFixed(2)}</td>
       <td>${d.pDiesel.toFixed(2)}</td>
       <td style="font-weight:700;color:${cumColor}">${cumStr}</td>
@@ -1675,8 +1886,8 @@ function renderMainChart(prices, prices2025) {
   const yMin = Math.floor(Math.min(...allPrices)) - 0.8;
   const yMax = Math.ceil(Math.max(...allPrices)) + 1.2;
 
-  // 找出关键事件
-  const peakIdx = prices.reduce((maxI, d, i, arr) => d.p92 > arr[maxI].p92 ? i : maxI, 0);
+  // 找出关键事件（主油品 95#）
+  const peakIdx = prices.reduce((maxI, d, i, arr) => d.p95 > arr[maxI].p95 ? i : maxI, 0);
   const firstDownIdx = prices.findIndex(d => d.type === 'down');
 
   // markLine: 峰值水平参考线（只画线不打字——数值标签由下方 markPoint 图钉承担，
@@ -1686,25 +1897,25 @@ function renderMainChart(prices, prices2025) {
   const markLines = [];
   if (peakIdx >= 0) {
     markLines.push({
-      name: '峰值 ¥' + prices[peakIdx].p92.toFixed(2),
-      yAxis: prices[peakIdx].p92,
+      name: '峰值 ¥' + prices[peakIdx].p95.toFixed(2),
+      yAxis: prices[peakIdx].p95,
       lineStyle: { color: t.up, type: 'dashed', width: 1.5, opacity: 0.7 },
       label: { show: false }
     });
   }
 
   // markPoint: 关键事件（需要显式 value，否则 {c} 为 undefined）
-  // 「年初」胶囊必须给够宽度：文字「年初 ¥6.67」实测宽 48px，而 symbolSize 只给 36 会溢出去
+  // 「年初」胶囊必须给够宽度：文字「年初 ¥7.16」实测宽 48px，而 symbolSize 只给 36 会溢出去
   // ——浅色主题下溢出的白字落在白底上等于隐形。文字色也不能写死 '#fff'（暗色下对比度不足）。
   const markPoints = [
-    { name: '年初', coord: [labels[0], prices[0].p92], value: prices[0].p92.toFixed(2), symbol: 'roundRect', symbolSize: [62, 20], itemStyle: { color: t.ser92 }, label: { show: true, formatter: '年初 ¥{c}', color: t.onAccent, fontSize: 9 } }
+    { name: '年初', coord: [labels[0], prices[0].p95], value: prices[0].p95.toFixed(2), symbol: 'roundRect', symbolSize: [62, 20], itemStyle: { color: t.ser95 }, label: { show: true, formatter: '年初 ¥{c}', color: t.onAccent, fontSize: 9 } }
   ];
 
   if (peakIdx > 0) {
     markPoints.push({
       name: '峰值',
-      coord: [labels[peakIdx], prices[peakIdx].p92],
-      value: prices[peakIdx].p92.toFixed(2),
+      coord: [labels[peakIdx], prices[peakIdx].p95],
+      value: prices[peakIdx].p95.toFixed(2),
       symbol: 'pin', symbolSize: 45,
       itemStyle: { color: t.up },
       label: { show: true, formatter: '峰值\n¥{c}', position: 'top', distance: 8, color: t.up, fontSize: 11, fontWeight: 'bold' }
@@ -1713,8 +1924,8 @@ function renderMainChart(prices, prices2025) {
   if (firstDownIdx > 0 && firstDownIdx !== peakIdx) {
     markPoints.push({
       name: '首降',
-      coord: [labels[firstDownIdx], prices[firstDownIdx].p92],
-      value: prices[firstDownIdx].p92.toFixed(2),
+      coord: [labels[firstDownIdx], prices[firstDownIdx].p95],
+      value: prices[firstDownIdx].p95.toFixed(2),
       symbol: 'pin', symbolSize: 40,
       itemStyle: { color: t.down },
       // position 必须 'top'：'bottom' 会把文字压到 0# 柴油那条线上（首降点下方就是黑线），
@@ -1769,36 +1980,39 @@ function renderMainChart(prices, prices2025) {
       splitLine: { lineStyle: { color: t.splitLine } }
     },
     series: [
+      // 95# 为主油品：线最粗、面积填充、图例排首位
       {
-        name: '92# 汽油', type: 'line', data: prices.map(d=>d.p92),
+        name: '95# 汽油（主）', type: 'line', data: prices.map(d=>d.p95),
         smooth: 0.15, symbol: 'circle', symbolSize: 6,
-        lineStyle: { color: t.ser92, width: 2.5 },
-        itemStyle: { color: t.ser92 },
+        lineStyle: { color: t.ser95, width: 3.2 },
+        itemStyle: { color: t.ser95 },
+        emphasis: { focus: 'series' },
         areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:t.areaFrom},{offset:1,color:t.areaTo}]) },
         markLine: { symbol: 'none', data: markLines, silent: true },
         markPoint: { data: markPoints, animation: true }
       },
+      // 以下三条为对照油品，视觉上主动降权（细线 / 虚线 / 低饱和）
       {
-        name: '95# 汽油', type: 'line', data: prices.map(d=>d.p95),
-        smooth: 0.15, symbol: 'circle', symbolSize: 5,
-        lineStyle: { color: t.ser95, width: 2 },
-        itemStyle: { color: t.ser95 }
+        name: '92# 汽油', type: 'line', data: prices.map(d=>d.p92),
+        smooth: 0.15, symbol: 'circle', symbolSize: 4,
+        lineStyle: { color: t.ser92, width: 1.6, opacity: .75 },
+        itemStyle: { color: t.ser92 }
       },
       {
         name: '98# 汽油', type: 'line', data: prices.map(d=>d.p98),
         smooth: 0.15, symbol: 'circle', symbolSize: 4,
-        lineStyle: { color: t.ser98, width: 1.6, type: 'dashed' },
+        lineStyle: { color: t.ser98, width: 1.4, type: 'dashed', opacity: .8 },
         itemStyle: { color: t.ser98 }
       },
       {
         name: '0# 柴油', type: 'line', data: prices.map(d=>d.pDiesel),
-        smooth: 0.15, symbol: 'circle', symbolSize: 5,
-        lineStyle: { color: t.serDiesel, width: 2 },
+        smooth: 0.15, symbol: 'circle', symbolSize: 4,
+        lineStyle: { color: t.serDiesel, width: 1.6, type: 'dotted', opacity: .75 },
         itemStyle: { color: t.serDiesel }
       },
-      // 2025年92#同比参考线
+      // 去年同期对照线：只跟主油品，才有可比性
       ...(prices2025 && prices2025.length ? [{
-        name: '92# 2025同期', type: 'line', data: prices2025.map(d=>d.p92),
+        name: '95# 去年同期', type: 'line', data: prices2025.map(d=>d.p95),
         smooth: 0.15, symbol: 'diamond', symbolSize: 4,
         lineStyle: { color: t.serYoY, width: 1.5, type: 'dotted' },
         itemStyle: { color: t.serYoY }
@@ -1923,32 +2137,34 @@ function renderBarChart(prices) {
 }
 
 // ============ 影响卡片数值填充 ============
+// 行车成本一律按主油品 95# 计算（用户实加标号），柴油相关仍走 0#。
 function updateImpactCards(prices, city) {
   if (!prices || prices.length === 0) return;
 
+  const P = 'p95';
   const first = prices[0];
   const last = prices[prices.length - 1];
-  const all92 = prices.map(p => p.p92);
+  const all92 = prices.map(p => p[P]);
   const allDiesel = prices.map(p => p.pDiesel);
   const peak92 = Math.max(...all92);
   const peakDiesel = Math.max(...allDiesel);
   const minDiesel = Math.min(...allDiesel);
 
-  // 月均油费：百公里10升 × 月行1000公里 = 100升/月
+  // 月均油费：百公里 10 升 × 月行 1000 公里 = 100 升/月
   const MONTHLY_LITERS = 100;
   const min92Price = Math.min(...all92);
   const peakCost = Math.round(peak92 * MONTHLY_LITERS);
   const peakAmp = Math.round(peak92 * MONTHLY_LITERS);
-  const currentCost = Math.round(last.p92 * MONTHLY_LITERS);
+  const currentCost = Math.round(last[P] * MONTHLY_LITERS);
   const ampCost = Math.round((peak92 - min92Price) * MONTHLY_LITERS);
 
   // 柴油振幅
   const dieselAmp = (peakDiesel - minDiesel).toFixed(2);
   const dieselExtra400 = Math.round((peakDiesel - minDiesel) * 400);
 
-  // 网约车月均增费（全职司机月行约5000公里,百公里油耗8升）
-  const peakDiff = (peak92 - first.p92).toFixed(2);
-  const driverExtra = Math.round((peak92 - first.p92) * 50 * 8);
+  // 网约车月均增费（全职司机月行约 5000 公里，百公里油耗 8 升 → 月 400 升）
+  const peakDiff = (peak92 - first[P]).toFixed(2);
+  const driverExtra = Math.round((peak92 - first[P]) * 50 * 8);
 
   function setDyn(id, val) {
     const el = document.getElementById(id);
@@ -1963,8 +2179,10 @@ function updateImpactCards(prices, city) {
   setDyn('icDieselCost', dieselExtra400);
 }
 
-// ============ 时间线动态生成 ============
-function generateTimeline(prices, city) {
+// ============ 时间线动态生成（主油品 95#）============
+function generateTimeline(prices, city, primary, label) {
+  const P = primary || 'p95';
+  const L = label || '95#';
   const container = document.getElementById('timelineContainer');
   if (!container) return;
   container.innerHTML = '';
@@ -1987,25 +2205,26 @@ function generateTimeline(prices, city) {
     // 每条记录存的是「本次调价之后」的价格，所以本段涨跌的基准是上一条记录，
     // 而不是组内第一条 —— 否则单次调价段会算成 0 变动（"从8.42降至8.42"）
     const ref = i > 0 ? prices[i - 1] : group[0];
+    const pPrimDiff = +(end[P] - ref[P]).toFixed(2);
     const p92Diff = +(end.p92 - ref.p92).toFixed(2);
     const p95Diff = +(end.p95 - ref.p95).toFixed(2);
     const pDieselDiff = +(end.pDiesel - ref.pDiesel).toFixed(2);
 
-    groups.push({ type, group, start, end, ref, cnt, isUp, gasSum, dieselSum, p92Diff, p95Diff, pDieselDiff });
+    groups.push({ type, group, start, end, ref, cnt, isUp, gasSum, dieselSum, pPrimDiff, p92Diff, p95Diff, pDieselDiff });
     i = j;
   }
 
-  // 找峰值和首降
-  const all92 = prices.map(p => p.p92);
-  const peak92 = Math.max(...all92);
-  const peakEntry = prices.find(p => p.p92 === peak92);
+  // 找峰值和首降（主油品）
+  const allPrim = prices.map(p => p[P]);
+  const peakPrim = Math.max(...allPrim);
+  const peakEntry = prices.find(p => p[P] === peakPrim);
   const firstDownIdx = prices.findIndex(p => p.type === 'down');
   const firstDown = firstDownIdx >= 0 ? prices[firstDownIdx] : null;
   const firstUpAfterDown = firstDownIdx >= 0 ? prices.slice(firstDownIdx + 1).find(p => p.type === 'up') : null;
 
   // 累计振幅
-  const min92 = Math.min(...all92);
-  const amplitude = +(peak92 - min92).toFixed(2);
+  const minPrim = Math.min(...allPrim);
+  const amplitude = +(peakPrim - minPrim).toFixed(2);
 
   // 生成每个时间节点
   groups.forEach((g, idx) => {
@@ -2046,13 +2265,13 @@ function generateTimeline(prices, city) {
     // 峰值标记
     let peakNote = '';
     if (peakEntry && g.group.some(p => p.date === peakEntry.date)) {
-      peakNote = `<br><br><strong>年内最高点：</strong>${city}92#达到${peak92.toFixed(2)}元/升，95# ${peakEntry.p95.toFixed(2)}元/升，98# ${peakEntry.p98.toFixed(2)}元/升。`;
+      peakNote = `<br><br><strong>年内最高点：</strong>${city}${L}达到${peakPrim.toFixed(2)}元/升，同期 92# ${peakEntry.p92.toFixed(2)}元/升，98# ${peakEntry.p98.toFixed(2)}元/升。`;
     }
 
     // 首降标记
     let firstDownNote = '';
     if (firstDown && g.group.some(p => p.date === firstDown.date)) {
-      firstDownNote = `<br><br><strong>年内首次降价：</strong>打破连涨态势，92#回落至${firstDown.p92.toFixed(2)}元/升，相比峰值降${(peak92 - firstDown.p92).toFixed(2)}元/升。`;
+      firstDownNote = `<br><br><strong>年内首次降价：</strong>打破连涨态势，${L}回落至${firstDown[P].toFixed(2)}元/升，相比峰值降${(peakPrim - firstDown[P]).toFixed(2)}元/升。`;
     }
 
     // 首涨标记（降后的转折）
@@ -2061,20 +2280,20 @@ function generateTimeline(prices, city) {
       turnNote = `<br><br><strong>降后回调：</strong>油价在短暂下跌后再度上行，市场进入新一轮波动周期。`;
     }
 
-    // 主体描述
+    // 主体描述（主油品领读，其余油品作对照）
     let body;
     if (g.isUp) {
-      body = `${city}92#从${g.ref.p92.toFixed(2)}涨至${g.end.p92.toFixed(2)}元/升（${g.p92Diff >= 0 ? '+' : ''}${g.p92Diff.toFixed(2)}），95#从${g.ref.p95.toFixed(2)}涨至${g.end.p95.toFixed(2)}元/升（${g.p95Diff >= 0 ? '+' : ''}${g.p95Diff.toFixed(2)}），0#柴油从${g.ref.pDiesel.toFixed(2)}涨至${g.end.pDiesel.toFixed(2)}元/升（${g.pDieselDiff >= 0 ? '+' : ''}${g.pDieselDiff.toFixed(2)}）。`;
+      body = `${city}${L}从${g.ref[P].toFixed(2)}涨至${g.end[P].toFixed(2)}元/升（${g.pPrimDiff >= 0 ? '+' : ''}${g.pPrimDiff.toFixed(2)}），92#从${g.ref.p92.toFixed(2)}涨至${g.end.p92.toFixed(2)}元/升（+${g.p92Diff.toFixed(2)}），0#柴油从${g.ref.pDiesel.toFixed(2)}涨至${g.end.pDiesel.toFixed(2)}元/升（+${g.pDieselDiff.toFixed(2)}）。`;
       if (g.gasSum >= 500) {
         body += `本轮段累计上调${g.gasSum}元/吨，幅度较大。`;
       }
-      body += `以50升油箱计算，加满92#多花约${Math.round(Math.abs(g.p92Diff) * 50)}元。`;
+      body += `以50升油箱计算，加满${L}多花约${Math.round(Math.abs(g.pPrimDiff) * 50)}元。`;
     } else {
-      body = `${city}92#从${g.ref.p92.toFixed(2)}降至${g.end.p92.toFixed(2)}元/升（${g.p92Diff >= 0 ? '+' : ''}${g.p92Diff.toFixed(2)}），95#从${g.ref.p95.toFixed(2)}降至${g.end.p95.toFixed(2)}元/升（${g.p95Diff >= 0 ? '+' : ''}${g.p95Diff.toFixed(2)}），0#柴油从${g.ref.pDiesel.toFixed(2)}降至${g.end.pDiesel.toFixed(2)}元/升（${g.pDieselDiff >= 0 ? '+' : ''}${g.pDieselDiff.toFixed(2)}）。`;
+      body = `${city}${L}从${g.ref[P].toFixed(2)}降至${g.end[P].toFixed(2)}元/升（${g.pPrimDiff.toFixed(2)}），92#从${g.ref.p92.toFixed(2)}降至${g.end.p92.toFixed(2)}元/升（${g.p92Diff.toFixed(2)}），0#柴油从${g.ref.pDiesel.toFixed(2)}降至${g.end.pDiesel.toFixed(2)}元/升（${g.pDieselDiff.toFixed(2)}）。`;
       if (Math.abs(g.gasSum) >= 500) {
         body += `本轮段累计下调${Math.abs(g.gasSum)}元/吨，降幅显著。`;
       }
-      body += `50升油箱加满92#可省约${Math.round(Math.abs(g.p92Diff) * 50)}元。`;
+      body += `50升油箱加满${L}可省约${Math.round(Math.abs(g.pPrimDiff) * 50)}元。`;
     }
 
     body += peakNote + firstDownNote + turnNote;

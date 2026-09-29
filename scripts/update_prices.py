@@ -51,6 +51,26 @@ CONVERSION = {
     "diesel": 1240, # 0#柴油：1吨 ≈ 1240升
 }
 
+# ============ 基准价（唯一真源）============
+# ⚠️ 这里以前有三份各自写死的 6.67/7.16/8.16/6.26（compute_per_liter_prices 的 else 分支、
+#    main() 建新文件的默认 meta、以及 data.json 里的值）。一旦它们漂移，
+#    「无历史数据时用哪套基准」就会静默用错价 —— 所以收敛成一个常量，两边都引用它。
+BASE_PRICES = {
+    "basePrice92": 6.67,      # 2026-01-06 济南 92# 基准（该轮为搁浅，价格未动）
+    "basePrice95": 7.16,
+    "basePrice98": 8.16,
+    "basePriceDiesel": 6.26,
+}
+PRIMARY_FUEL = "p95"          # 主油品；页面按 meta.primary 取基准价，不硬编码 92#
+
+# 基准价字段 → prices[] 里的价格字段名
+_BASE_KEY_TO_FIELD = {
+    "basePrice92": "p92",
+    "basePrice95": "p95",
+    "basePrice98": "p98",
+    "basePriceDiesel": "pDiesel",
+}
+
 # 请求头
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -120,6 +140,74 @@ def get_last_date(prices):
     if not prices:
         return None
     return max(p["date"] for p in prices)
+
+
+def normalize_meta(existing, prices):
+    """
+    补齐 / 校正 meta 里的基准价与主油品字段（就地修改 existing["meta"]）。
+
+    ⚠️ 为什么要这一步：老 data.json 只有 basePrice92，页面侧 `meta['basePrice95']`
+       取到 undefined 后会退到 `prices[0].p95` —— 只要首轮记录还在，结果恰好正确；
+       但**首轮记录一旦丢失**（数据被截断、年度切换），基准价就会静默漂到后面的轮次上，
+       所有「较年初」类指标集体偏掉，且没有任何报错。
+
+    优先级：**首轮真实价格 > meta 现有值 > BASE_PRICES 默认值**。
+    首轮记录是 prices 全链路的锚点，它存在时必须以它为准。
+    """
+    meta = existing.setdefault("meta", {})
+    first = prices[0] if prices else None
+
+    for base_key, field in _BASE_KEY_TO_FIELD.items():
+        if first and first.get(field) is not None:
+            # 首轮价格是硬锚点：meta 里漂了也要拉回来
+            if meta.get(base_key) != first[field]:
+                if base_key in meta:
+                    print(f"  🔧 校正 {base_key}: {meta[base_key]} → {first[field]}"
+                          f"（以首轮 {first['date']} 实际价格为准）")
+                meta[base_key] = first[field]
+        elif meta.get(base_key) is None:
+            meta[base_key] = BASE_PRICES.get(base_key)
+            print(f"  🔧 补写 {base_key} = {meta[base_key]}（meta 缺失且无首轮记录，取默认基准）")
+
+    if meta.get("primary") is None:
+        meta["primary"] = PRIMARY_FUEL
+        print(f"  🔧 补写 primary = {PRIMARY_FUEL}")
+
+    return meta
+
+
+def check_yoy_prices(existing):
+    """
+    校验 prices2025 是否真的是**上一年**的同期数据（就地剔除不合格的）。
+
+    ⚠️ 曾经的真实事故：data.json 里的 prices2025 装的根本不是 2025 年的数据，
+       而是 2026 年 1~7 月轮次的**陈旧副本**（日期同为 2026、价格还是早期版本）。
+       页面侧把它当「去年同期」渲染 → 「较去年同月」卡片实际算的是
+       「9 月对比 7 月」，同比线也是假的，而且**没有任何报错**。
+
+    判据：该数组里的日期年份必须 **< meta.year**。
+    不合格就整段移除（宁可卡片显示「—」，也不能把错数据当真数据展示）。
+    """
+    yoy = existing.get("prices2025")
+    if not isinstance(yoy, list) or not yoy:
+        return
+
+    meta_year = existing.get("meta", {}).get("year")
+    bad = []
+    for row in yoy:
+        ds = str(row.get("date", ""))
+        m = re.match(r"^(\d{4})-", ds)
+        if not m or (meta_year and int(m.group(1)) >= meta_year):
+            bad.append(ds)
+
+    if not bad:
+        print(f"  ✅ prices2025 校验通过（{len(yoy)} 条，年份均 < {meta_year}）")
+        return
+
+    print(f"  ❌ prices2025 含 {len(bad)} 条非上一年数据（示例: "
+          f"{', '.join(bad[:3])}{' …' if len(bad) > 3 else ''}）")
+    print(f"     → 已整段移除：宁可「较去年同月」显示 —，也不能把错数据当真数据展示")
+    existing["prices2025"] = []
 
 
 def format_date_short(date_str):
@@ -430,11 +518,12 @@ def fetch_tuanyou_adjustments(last_known_date):
 
 # ============ 核心逻辑：数据合并与计算 ============
 
-def compute_per_liter_prices(prices, new_adj):
+def compute_per_liter_prices(prices, new_adj, meta=None):
     """
     根据最新的元/吨调整额，计算新的元/升零售价。
     prices: 现有数据（用于取上一轮价格）
     new_adj: [(date_str, type, gas_ton, diesel_ton), ...]
+    meta:    data.json 的 meta；无历史记录时优先用它里面的基准价
     返回新的 price 条目列表
     """
     # 取最后一轮作为基准
@@ -446,11 +535,16 @@ def compute_per_liter_prices(prices, new_adj):
         prev_p98 = last["p98"]
         prev_pDiesel = last["pDiesel"]
     else:
+        # ⚠️ 无历史数据：优先用 meta 里已校正的基准价，没有再退默认值。
+        #    以前这里硬编码 6.67 等四个数，与 meta 各写一份 —— 漂移了也无人察觉。
+        meta = meta or {}
         next_round = 1
-        prev_p92 = 6.67  # 默认济南基准价
-        prev_p95 = 7.16
-        prev_p98 = 8.16
-        prev_pDiesel = 6.26
+        prev_p92 = meta.get("basePrice92", BASE_PRICES["basePrice92"])
+        prev_p95 = meta.get("basePrice95", BASE_PRICES["basePrice95"])
+        prev_p98 = meta.get("basePrice98", BASE_PRICES["basePrice98"])
+        prev_pDiesel = meta.get("basePriceDiesel", BASE_PRICES["basePriceDiesel"])
+        print(f"  ℹ️ 无历史记录，基准价取: 92#={prev_p92} 95#={prev_p95} "
+              f"98#={prev_p98} 0#柴油={prev_pDiesel}")
 
     new_entries = []
 
@@ -520,7 +614,8 @@ def main(dry_run=False, force=False):
                 "lastUpdated": datetime.now().strftime("%Y-%m-%d"),
                 "city": "济南",
                 "province": "山东",
-                "basePrice92": 6.67,
+                **BASE_PRICES,
+                "primary": PRIMARY_FUEL,
                 "dataSource": "国家发展和改革委员会 · 团友网 · 商务部全国石油市场管理系统"
             },
             "prices2026": []
@@ -530,6 +625,12 @@ def main(dry_run=False, force=False):
     prices = existing.get("prices2026") or existing.get("prices", [])
     last_date = get_last_date(prices)
     print(f"📋 现有记录: {len(prices)} 条，最后日期: {last_date}")
+
+    # 补齐 / 校正 meta（老 data.json 缺 basePrice95 等；meta 与首轮价格漂移也在此拉回）
+    normalize_meta(existing, prices)
+
+    # 校验「去年同期」数据真的是上一年（曾把 2026 的陈旧副本当成 2025 用了很久）
+    check_yoy_prices(existing)
 
     # 阶段1: 从多个数据源获取新调价记录
     print("\n🔍 阶段1: 获取最新调价记录...")
@@ -593,7 +694,7 @@ def main(dry_run=False, force=False):
 
     # 阶段2: 计算每升价格并生成新条目
     print("\n🔢 阶段2: 计算零售价格...")
-    new_entries = compute_per_liter_prices(prices, unique_new)
+    new_entries = compute_per_liter_prices(prices, unique_new, existing.get("meta"))
 
     # 验证
     for entry in new_entries:
