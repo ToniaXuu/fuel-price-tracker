@@ -1,7 +1,7 @@
 {
   "meta": {
     "year": 2026,
-    "lastUpdated": "2026-09-24",
+    "lastUpdated": "2026-10-15",
     "city": "济南",
     "province": "山东",
     "basePrice92": 6.67,
@@ -216,6 +216,17 @@
       "type": "up",
       "gas": 395,
       "diesel": 385,
+      "p92": 8.59,
+      "p95": 9.21,
+      "p98": 10.74,
+      "pDiesel": 8.19
+    },
+    {
+      "round": 20,
+      "date": "2026-10-15",
+      "type": "flat",
+      "gas": 0,
+      "diesel": 0,
       "p92": 8.59,
       "p95": 9.21,
       "p98": 10.74,
