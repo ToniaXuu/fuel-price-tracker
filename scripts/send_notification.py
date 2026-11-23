@@ -56,7 +56,12 @@ def health_warning():
     lines = "\n".join(
         f"- ❌ **{n}**：{v.get('detail', '不可用')}" for n, v in bad.items()
     )
-    if len(bad) == len(health):
+    # 价格校验类告警（现价锚点 / 数据校验）不是「源挂了」，而是「算出来的价是错的」——
+    # 这两种失效的处置方式完全不同，措辞必须分开，否则「数据未受影响」会误导人。
+    price_checks = {"现价锚点", "数据校验"}
+    if price_checks & set(bad):
+        head = "🚨 **价格校验失败 —— 本次未写入数据，页面可能仍是旧值/错值**"
+    elif len(bad) == len(health):
         head = "🚨 **全部数据源不可用 —— 数据可能已停止更新**"
     else:
         head = "⚠️ **数据源异常（其余源仍正常，数据未受影响）**"

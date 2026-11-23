@@ -12,8 +12,11 @@
 转换公式:
   92#汽油: 1吨 ≈ 1250升  (NDRC 标准换算)
   95#汽油: 92#变动 × 1.073
-  98#汽油: 92#变动 × 1.12
+  98#汽油: 与 95# 同步调整（山东 98#−95# 价差恒为 ¥1.00/升，见 P98_SPREAD）
   0#柴油: 按柴油吨价独立换算 (1吨 ≈ 1240升)
+
+⚠️ 链式累加是「一次错、后面全错」的结构，所以每次运行都会用团友网省级页
+   公布的实际现价（92/95/98/0#）做绝对值校验，偏差超限即拒写并告警。
 
 用法:
   python update_prices.py              # 自动检测并更新
@@ -62,6 +65,28 @@ BASE_PRICES = {
     "basePriceDiesel": 6.26,
 }
 PRIMARY_FUEL = "p95"          # 主油品；页面按 meta.primary 取基准价，不硬编码 92#
+P98_SPREAD = 1.00             # 山东 98# 与 95# 的稳定价差（元/升），有现价锚点兜底
+
+# ============ 涨跌方向词表（唯一真源）============
+# ⚠️ 2026-11-23 事故根因：以前用 `any(w in direction for w in ("降","跌","低"))` 猜方向，
+#    可源站有时写「下调」—— 这个词里没有 降/跌/低 任何一个字，于是被当成「涨」。
+#    结果 11月12日那轮 下调645元/吨 被记成 +645，95# 从 8.96 直接跳到 10.07。
+#    教训：方向必须查**显式词表**，不能靠字频猜；认不出的词宁可报错，也不许默认 up。
+DIRECTION_DOWN = {"下调", "下降", "降低", "下跌", "降", "跌"}
+DIRECTION_UP = {"上涨", "上调", "提高", "涨"}
+
+# ============ 合理性闸门（拒写阈值）============
+MAX_ROUND_DELTA = 1.00        # 单轮每升变动上限（元/升）；史上最大单轮约 0.93
+PRICE_FLOOR, PRICE_CEIL = 5.0, 11.0   # 92#/95#/0# 的绝对区间
+ANCHOR_TOL = 0.10             # 主油品（92#/95#）与站上现价的允许偏差
+ANCHOR_TOL_WEAK = 0.20        # 98#/0# 允许略宽，且只告警不阻断
+
+# 现价锚点页（省级页的 meta description 直接公布四个现价，是最硬的绝对锚点）
+ANCHOR_URL = "https://www.tuanyou.net/youjia/shandong/"
+
+# 团友网「最新公告日期」，由 fetch_tuanyou_adjustments 填，
+# 供现价校验判断「站上现价」对应的是不是库里最后一轮。
+PAGE_STATE = {"newest_notice_date": None}
 
 # 基准价字段 → prices[] 里的价格字段名
 _BASE_KEY_TO_FIELD = {
@@ -464,11 +489,13 @@ def fetch_tuanyou_adjustments(last_known_date):
         for y, m, d in re.findall(r"(\d{4})年(\d{1,2})月(\d{1,2})日", html)
     ]
     newest_on_page = max(all_dates) if all_dates else None
+    PAGE_STATE["newest_notice_date"] = newest_on_page
 
     # --- ① 元/吨 幅度（新闻摘要）---
     # 实际格式: "2026年7月31日晚上24时起，国内汽、柴油分别上涨685元/吨和655元/吨"
-    # 方向词需覆盖：上涨/上调/涨、下降/下调/降/跌
-    pattern = r'(\d{4})年(\d{1,2})月(\d{1,2})日.*?(上涨|下调|下降|提高|降低|下调|下跌|上调|降|跌)[^\d]*?(\d+)\s*元/吨[^\d]*?(\d+)\s*元/吨'
+    # ⚠️ 双字词必须排在单字前面（否则「上调」会被「涨」之外的短词抢先切走）；
+    #    这里只负责「可能出现的词」，语义判定交给下面的 DIRECTION_* 词表。
+    pattern = r'(\d{4})年(\d{1,2})月(\d{1,2})日.*?(上涨|上调|提高|下调|下降|降低|下跌|涨|降|跌)[^\d]*?(\d+)\s*元/吨[^\d]*?(\d+)\s*元/吨'
     entries = re.findall(pattern, html)
 
     for year, month, day, direction, gas_str, diesel_str in entries:
@@ -476,10 +503,21 @@ def fetch_tuanyou_adjustments(last_known_date):
         if last_known_date and date_str <= last_known_date:
             continue
 
-        # 方向判定：含"降/跌/低"则为降价
-        is_down = any(w in direction for w in ("降", "跌", "低"))
-        gas_amt = int(gas_str) * (-1 if is_down else 1)
-        diesel_amt = int(diesel_str) * (-1 if is_down else 1)
+        # 方向判定：查显式词表，不做字频猜测（`下调` 不含"降"字，曾因此被记成上涨）
+        direction = direction.strip()
+        if direction in DIRECTION_DOWN:
+            sign = -1
+        elif direction in DIRECTION_UP:
+            sign = 1
+        else:
+            # 理论上走不到（正则已限定候选词），但一旦源站换用新词，必须炸出来，
+            # 绝不能像 2026-11-23 那样「认不出就默认 up」。
+            print(f"  ❌ {date_str}: 未识别的方向词「{direction}」，拒绝猜测")
+            mark_source("团友网", False, f"{date_str} 出现未识别方向词「{direction}」")
+            continue
+
+        gas_amt = int(gas_str) * sign
+        diesel_amt = int(diesel_str) * sign
         adj_type = "down" if gas_amt < 0 else "up"
 
         print(f"  📅 {date_str}: 汽油 {gas_amt:+d}元/吨, 柴油 {diesel_amt:+d}元/吨 [{adj_type}]")
@@ -552,12 +590,15 @@ def compute_per_liter_prices(prices, new_adj, meta=None):
         # 计算每升变动
         delta_92 = round(gas_ton / CONVERSION["92"], 2)
         delta_95 = round(delta_92 * 1.073, 2)
-        delta_98 = round(delta_92 * 1.12, 2)
         delta_diesel = round(diesel_ton / CONVERSION["diesel"], 2) if diesel_ton != 0 else 0
 
         new_p92 = round(prev_p92 + delta_92, 2)
         new_p95 = round(prev_p95 + delta_95, 2)
-        new_p98 = round(prev_p98 + delta_98, 2)
+        # ⚠️ 98# 不再走「Δ92 × 1.12」：1.12 偏小，而 98# 是随市场加价的品种，
+        #    真实结构与 92# 的吨价变动无关。山东实测 98#−95# 恒为 ¥1.00/升
+        #    （2026-01-06: 8.16−7.16；2026-11-12: 9.94−8.94）。
+        #    旧系数一年多累积出 +0.53 的漂移。
+        new_p98 = round(new_p95 + P98_SPREAD, 2)
         new_pDiesel = round(prev_pDiesel + delta_diesel, 2)
 
         entry = {
@@ -583,18 +624,114 @@ def compute_per_liter_prices(prices, new_adj, meta=None):
     return new_entries
 
 
-def validate_entry(entry):
-    """验证数据条目是否合理"""
-    # 价格应在合理范围 (5-12元/升)
-    for key in ["p92", "p95", "p98", "pDiesel"]:
-        if not (4.0 <= entry[key] <= 15.0):
-            return False, f"{key}={entry[key]} 超出合理范围"
+def validate_entry(entry, prev=None):
+    """验证单条记录是否合理。
 
-    # 价格应该有价格梯度: p98 > p95 > p92
+    三道闸（2026-11-23 事故后加严）：
+      ① 价格落在绝对区间内 —— 10.07 这种越界值能拦住
+      ② 价格梯度 98# ≥ 95# ≥ 92#
+      ③ **单轮变动幅度** —— 方向读反时误差是「两倍幅度」，这一条最直接
+    """
+    for key in ["p92", "p95", "p98", "pDiesel"]:
+        if not (PRICE_FLOOR <= entry[key] <= PRICE_CEIL):
+            return False, f"{key}={entry[key]} 越出合理区间 [{PRICE_FLOOR}, {PRICE_CEIL}]"
+
     if not (entry["p98"] >= entry["p95"] >= entry["p92"]):
         return False, "价格梯度异常: 98#≥95#≥92#"
 
+    if prev:
+        for key in ["p92", "p95", "p98", "pDiesel"]:
+            delta = round(entry[key] - prev[key], 2)
+            if abs(delta) > MAX_ROUND_DELTA:
+                return False, (f"{key} 单轮变动 {delta:+.2f} 元/升 超过上限 "
+                               f"{MAX_ROUND_DELTA}（疑似涨跌方向读反）")
+
     return True, "OK"
+
+
+# ============ 现价锚点：绝对值交叉校验 ============
+# 为什么必须有这一层：上面所有校验都建立在「元/吨 → 元/升」的链式累加上，
+# 而链式累加是「一次错、后面全错」。只有跟站方公布的**现价**对账，才能
+# 既抓方向错误，也抓长期累积漂移。省级页的 meta description 直接写着四个现价：
+#   山东今日油价92号汽油:8.33元/升、95号汽油:8.94元/升、98号汽油:9.94元/升和0号柴油：7.96元/升
+ANCHOR_LABELS = {
+    "p92": r"92号汽油",
+    "p95": r"95号汽油",
+    "p98": r"98号汽油",
+    "pDiesel": r"0号柴油",
+}
+
+
+def fetch_tuanyou_anchor():
+    """抓取省级页公布的当期现价。拿不到返回 None（不阻断主流程）。"""
+    try:
+        import requests
+    except ImportError:
+        mark_source("现价锚点", False, "缺少 requests 库")
+        return None
+
+    try:
+        resp = requests.get(ANCHOR_URL, headers=HEADERS, timeout=15)
+        resp.encoding = "utf-8"
+        html = resp.text
+    except Exception as e:
+        mark_source("现价锚点", False, f"请求失败: {str(e)[:100]}")
+        return None
+
+    # 优先从 meta description 里取（一处给全四个价），取不到再退回全文匹配
+    m = re.search(r'content="([^"]*92号汽油[^"]*)"', html)
+    scope = m.group(1) if m else html
+
+    anchor = {}
+    for key, label in ANCHOR_LABELS.items():
+        mm = re.search(label + r"\s*[:：]\s*(\d+(?:\.\d+)?)\s*元/升", scope)
+        anchor[key] = float(mm.group(1)) if mm else None
+
+    if anchor["p92"] is None or anchor["p95"] is None:
+        mark_source("现价锚点", False, "省级页未解析到 92#/95# 现价（页面结构可能已变）")
+        return None
+
+    upd = re.search(r"油价更新于\s*(\d{4}-\d{2}-\d{2})", scope)
+    anchor["updated"] = upd.group(1) if upd else None
+    return anchor
+
+
+def audit_against_anchor(prices, anchor):
+    """用现价锚点校验序列末端。返回 (ok, hard_errors, notes)。
+
+    对齐前提：库里最后一轮 == 站上最新公告轮。否则现价对应的不是我们的末轮
+    （例如库里落后两轮），比对没有意义 —— 此时只提示、不判失败。
+    """
+    if not anchor:
+        return True, [], ["现价锚点不可用，跳过绝对值校验（已记入健康状态）"]
+    if not prices:
+        return True, [], ["无历史数据，跳过现价校验"]
+
+    last = prices[-1]
+    notice = PAGE_STATE["newest_notice_date"]
+    if notice and last["date"] != notice:
+        return True, [], [f"库里末轮 {last['date']} ≠ 站上最新公告 {notice}，"
+                          f"现价对不上同一轮，跳过校验"]
+
+    hard, notes = [], []
+    for key, label in ANCHOR_LABELS.items():
+        real, mine = anchor.get(key), last.get(key)
+        if real is None or mine is None:
+            continue
+        diff = round(mine - real, 2)
+        tol = ANCHOR_TOL if key in ("p92", "p95") else ANCHOR_TOL_WEAK
+        mark = "✅" if abs(diff) <= tol else "❌"
+        notes.append(f"{mark} {label}: 本站 {mine} vs 站上 {real} → {diff:+.2f}")
+        # 主油品偏差超限 = 数据已经错了，必须拒写；98#/0# 只告警不阻断
+        if abs(diff) > tol and key in ("p92", "p95"):
+            hard.append(f"{label} 偏差 {diff:+.2f} 元/升 超过 {tol}")
+
+    if hard:
+        mark_source("现价锚点", False, "；".join(hard))
+    else:
+        mark_source("现价锚点", True, f"末轮 {last['date']} 与站上现价一致")
+    return (not hard), hard, notes
+
 
 
 # ============ 主流程 ============
@@ -665,8 +802,37 @@ def main(dry_run=False, force=False):
         print(f"  {'✅' if st['ok'] else '❌'} {name}: {st['detail']}")
     healthy = [n for n, st in SOURCE_HEALTH.items() if st["ok"]]
 
+    # ---- 现价锚点：抓一次，下面两条路径共用 ----
+    print("\n🎯 现价锚点（省级页公布的当期零售价，用于绝对值对账）")
+    anchor = fetch_tuanyou_anchor()
+    if anchor:
+        print(f"  📌 92#={anchor['p92']}  95#={anchor['p95']}  "
+              f"98#={anchor['p98']}  0#={anchor['pDiesel']}"
+              f"（更新于 {anchor.get('updated') or '未知'}）")
+    else:
+        print("  ⚠️ 未能取得现价锚点（见健康状态）")
+
+    def _audit(seq, when):
+        """对账并打印明细；失败时给出拒写提示。返回是否通过。"""
+        ok, hard, notes = audit_against_anchor(seq, anchor)
+        for n in notes:
+            print(f"  {n}")
+        if not ok:
+            print(f"\n❌ {when}：本站价格与站上公布现价不符 —— 拒绝写入！")
+            for h in hard:
+                print(f"   · {h}")
+            print("   → 通常意味着涨跌方向读反，或链式累加已累积漂移；请人工核对后再跑。")
+        return ok
+
     if not all_new:
         if healthy:
+            print("\n🩺 没有发现新的调价记录，先做一次现价自检…")
+            # ⚠️「没有新数据」不等于「数据是对的」：历史遗留的错值只能靠这一步兜住
+            if not _audit(prices, "现价自检"):
+                if not dry_run:
+                    save_health()
+                print("\n❌ 库内数据已与真实油价不符，需要修复 data.json（本次不写入）。")
+                sys.exit(1)
             print("\n✅ 没有发现新的调价记录，数据已是最新。")
             if not dry_run:
                 save_health()
@@ -696,14 +862,31 @@ def main(dry_run=False, force=False):
     print("\n🔢 阶段2: 计算零售价格...")
     new_entries = compute_per_liter_prices(prices, unique_new, existing.get("meta"))
 
-    # 验证
+    # 验证：区间 + 梯度 + 单轮幅度。任一条不过就**拒写**（以前只打印警告，照样写入）
+    problems = []
+    prev = prices[-1] if prices else None
     for entry in new_entries:
-        valid, msg = validate_entry(entry)
+        valid, msg = validate_entry(entry, prev)
         if not valid:
-            print(f"  ⚠️ 数据验证失败: {entry['date']} - {msg}")
+            problems.append(f"{entry['date']}: {msg}")
+            print(f"  ❌ {entry['date']}: {msg}")
         else:
             print(f"  ✓ {entry['date']}: 92#={entry['p92']}, 95#={entry['p95']}, "
-                  f"98#={entry['p98']}, 0#柴油={entry['pDiesel']}")
+                  f"98#={entry['p98']}, 0#柴油={entry['pDiesel']} （Δ92 {entry['gas']:+d}元/吨）")
+        prev = entry
+
+    if problems:
+        mark_source("数据校验", False, "；".join(problems))
+        print("\n❌ 数据校验未通过，拒绝写入 —— 宁可不更新，也不能把错价推上线。")
+        if not dry_run:
+            save_health()
+        sys.exit(1)
+
+    # 写入前用现价锚点整体对账（含本次新增后的末轮）
+    if not _audit(prices + new_entries, "写入前对账"):
+        if not dry_run:
+            save_health()
+        sys.exit(1)
 
     if dry_run:
         print("\n🔍 [Dry Run] 不会写入文件。以上为将要添加的数据。")
