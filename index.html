@@ -48,7 +48,37 @@
     "license": "MIT"
   }
   </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+  <script>
+    /* ECharts 双源加载 —— 主源 jsdelivr，失败自动回落 unpkg。
+       不要改回 <script defer src="..."> —— 单源指向上游时，一旦该域名不可达，
+       echarts 就是 undefined，init() 会在 renderMainChart 处抛错，
+       后面「时间轴生成」和「reveal 观察器注册」全都不会执行 ——
+       17 个 .reveal 区块永远停在 opacity:0，整页除 hero 外一片空白。
+       这里只暴露一个 Promise，让 init() 能等待图表库而不阻塞数据渲染。 */
+    window.__echartsReady = new Promise(function (resolve) {
+      var SOURCES = [
+        'https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js',
+        'https://unpkg.com/echarts@5.5.1/dist/echarts.min.js'
+      ];
+      var i = 0;
+      (function next() {
+        if (i >= SOURCES.length) { resolve(false); return; }
+        var s = document.createElement('script');
+        s.src = SOURCES[i++];
+        s.async = false;
+        s.onload = function () {
+          // 有些网络环境会返回 200 但内容是错误页，这里再确认一次全局变量
+          if (typeof window.echarts !== 'undefined') { resolve(true); }
+          else { s.parentNode && s.parentNode.removeChild(s); next(); }
+        };
+        s.onerror = function () {
+          s.parentNode && s.parentNode.removeChild(s);
+          next();
+        };
+        document.head.appendChild(s);
+      })();
+    });
+  </script>
   <style>
     /* ================================================================
        设计令牌层 —— 所有颜色/尺寸只在此处定义，组件样式一律引用变量。
@@ -154,7 +184,31 @@
       --shadow-lg: 0 12px 40px rgba(0,0,0,.12);
       --radius: 18px;
       --radius-sm: 10px;
+      --radius-xs: 6px;
+      --radius-md: 14px;
       --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+      /* ---- 尺度标尺 ----
+         新增尺寸一律引用这里，别再写裸值。原文件里 padding 有 23 种、
+         字号 15 种、圆角 6 种，看不出哪两个是「同一个层级」——不是不好看，
+         是没法判断。--sp-* 按 4px 基准走，只覆盖常用档。 */
+      --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+      --sp-5: 24px; --sp-6: 32px; --sp-7: 48px;
+
+      /* 交互过渡：显式属性列表，不用 all。
+         all 会把 width/height 一并纳入，窗口缩放时卡片尺寸会「追着滑」。 */
+      --transition-ui:
+        box-shadow .35s cubic-bezier(0.4, 0, 0.2, 1),
+        transform .35s cubic-bezier(0.4, 0, 0.2, 1),
+        border-color .35s cubic-bezier(0.4, 0, 0.2, 1),
+        background-color .35s cubic-bezier(0.4, 0, 0.2, 1);
+
+      /* ---- 层级（浮层顺序只在这里排）---- */
+      --z-hero: 1;
+      --z-sticky: 10;
+      --z-float: 999;    /* 回到顶部 */
+      --z-chrome: 1000;  /* 主题分段控件 */
+      --z-bar: 9999;     /* 顶部进度条 */
 
       /* ---- 图表（由 JS 读取，CSS 是唯一真源）---- */
       --chart-axis-label: #6b7280;
@@ -189,7 +243,7 @@
     .progress-bar {
       position: fixed; top: 0; left: 0; height: 3px;
       background: var(--brand-gradient);
-      z-index: 9999;
+      z-index: var(--z-bar);
       transition: width .15s linear;
       border-radius: 0 2px 2px 0;
     }
@@ -338,22 +392,25 @@
     }
 
     .hero-stats {
-      display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;
+      /* 4 张等分，而不是 flex 里按内容收缩。
+         原先 flex + min-width:auto 让卡片宽度完全由文案决定，实测
+         82 / 71 / 58 / 157px —— 同排差 2.7 倍，第 4 张（label 最长的
+         「95#累计涨跌（元/升）」）几乎顶掉三分之一行宽。 */
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      max-width: 660px;
+      margin: 0 auto;
       animation: fadeInUp .7s .3s ease-out both;
     }
     .hero-stat {
       background: rgba(255,255,255,.06);
       border: 1px solid rgba(255,255,255,.1);
       border-radius: 14px;
-      padding: 16px 24px;
+      padding: 16px 18px;
       backdrop-filter: blur(6px);
-      min-width: 130px;
-      transition: var(--transition);
-    }
-    .hero-stat:hover {
-      background: rgba(255,255,255,.1);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0,0,0,.3);
+      min-width: 0;
+      transition: var(--transition-ui);
     }
     .hero-stat .val {
       font-size: 30px; font-weight: 800;
@@ -373,10 +430,6 @@
       background: color-mix(in srgb, var(--ser-95) 20%, rgba(255,255,255,.06));
       border-color: color-mix(in srgb, var(--ser-95) 55%, transparent);
       box-shadow: 0 8px 28px color-mix(in srgb, var(--ser-95) 22%, transparent);
-    }
-    .hero-stat.is-primary:hover {
-      background: color-mix(in srgb, var(--ser-95) 28%, rgba(255,255,255,.08));
-      box-shadow: 0 12px 34px color-mix(in srgb, var(--ser-95) 32%, transparent);
     }
     .hero-stat.is-primary .val { font-size: 34px; }
     .hero-stat.is-primary .lab { color: rgba(255,255,255,.8); }
@@ -456,20 +509,31 @@
       box-shadow: var(--shadow);
       padding: 32px;
       margin-bottom: 28px;
-      transition: var(--transition);
+      transition: var(--transition-ui);
       position: relative;
     }
-    .card:hover { box-shadow: var(--shadow-lg); }
 
-    /* ===== SCROLL REVEAL ===== */
+    /* ===== SCROLL REVEAL =====
+       用 animation 而不是 transition 来「演」这一段显影。
+       原因：同一个元素上的 transition 只有一条，谁在源码里靠后谁赢。
+       .reveal 原本排在 .card / .price-cell 后面，把它们自己的
+       `transition: ...` 整个顶掉了 —— 表现是 hover 的阴影突变、没有过渡。
+       换成 animation 后 .reveal 不再占用 transition，组件过渡恢复正常。
+       两点不能改：
+       ① 不给 animation 加 forwards —— 那会让动画终态钉死 transform，
+          把 .price-cell:hover 的 translateY(-3px) 永久压住；
+       ② 最终态仍然由 .reveal.visible 的普通声明给出，动画只负责过程。 */
     .reveal {
       opacity: 0;
       transform: translateY(36px);
-      transition: opacity .7s ease-out, transform .7s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .reveal.visible {
       opacity: 1;
       transform: translateY(0);
+      animation: revealUp .7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes revealUp {
+      from { opacity: 0; transform: translateY(36px); }
     }
 
     /* ===== QUICK STATS ===== */
@@ -481,8 +545,14 @@
       gap: 16px;
       margin-bottom: 32px;
     }
+    /* 5 张卡的「3+2」填充：用 6 列当公分母。
+       第一行每张占 2/6（=1/3），第二行两张各占 3/6（=1/2），
+       正好铺满整行。原先 3 列时第二行只剩两张、右侧空出 1/3 容器宽。 */
     @media (max-width: 1100px) {
-      .quick-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .quick-stats { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+      .quick-stats .qstat { grid-column: span 2; }
+      .quick-stats .qstat:nth-child(4),
+      .quick-stats .qstat:nth-child(5) { grid-column: span 3; }
     }
     .qstat {
       background: var(--card);
@@ -515,30 +585,38 @@
     .qstat .suffix { font-size: 12px; color: var(--sub); margin-top: 4px; }
 
     /* ===== CURRENT PRICES =====
-       布局：95# 主卡跨列做大，其余三张挤在右侧作对照。
-       ≤1100px 降为两列、≤640px 单列，主卡始终排第一。 */
+       宽屏：95# 主卡跨三行做大，其余三张挤在右侧作对照。
+       用显式 class 落位，不靠 :nth-of-type —— 后者一旦调整卡片顺序就会静默错位。 */
     .price-grid {
       display: grid;
       grid-template-columns: 1.9fr 1fr;
+      grid-template-areas: "pri a" "pri b" "pri c";
       gap: 16px;
       margin-bottom: 8px;
     }
-    /* 主卡占 2×2，右侧三张各自 1×1 */
-    .price-grid { grid-template-areas: "pri a" "pri b" "pri c"; }
     .price-cell.is-primary { grid-area: pri; }
-    .price-cell:not(.is-primary):nth-of-type(2) { grid-area: a; }
-    .price-cell:not(.is-primary):nth-of-type(3) { grid-area: b; }
-    .price-cell:not(.is-primary):nth-of-type(4) { grid-area: c; }
+    .price-cell.pc-92      { grid-area: a; }
+    .price-cell.pc-98      { grid-area: b; }
+    .price-cell.pc-diesel  { grid-area: c; }
+
+    /* 641–1100：主卡满宽 + 三张次卡等宽并排。
+       原方案是 "pri pri" / "a b" / "c c" —— 第 4 张（0#柴油）独占整行，
+       实宽 978px，是另两张 481px 的两倍，字号却一模一样，一宽一窄很失衡。 */
     @media (max-width: 1100px) {
       .price-grid {
-        grid-template-columns: repeat(2, 1fr);
-        grid-template-areas: "pri pri" "a b" "c c";
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-areas: "pri pri pri" "a b c";
       }
     }
+    /* ≤640：仍是「主卡满宽 + 三小卡一行」。
+       单列会把 4 张卡排成约 570px 的竖向长龙，手机上要滑近一屏才看完 4 个价格。
+       尺寸微调统一放在文件末尾的 RESPONSIVE 区（.price-cell 基础规则在后面，
+       写在这里会被它覆盖）。 */
     @media (max-width: 640px) {
       .price-grid {
-        grid-template-columns: 1fr;
-        grid-template-areas: "pri" "a" "b" "c";
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-areas: "pri pri pri" "a b c";
+        gap: 8px;
       }
     }
     .price-cell {
@@ -547,11 +625,10 @@
       padding: 18px;
       text-align: center;
       border: 1px solid var(--border);
-      transition: var(--transition);
+      transition: var(--transition-ui);
       display: flex; flex-direction: column; justify-content: center;
       position: relative;
     }
-    .price-cell:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
     .price-cell .p-label { font-size: 11px; color: var(--sub); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
     .price-cell .p-value { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
     .price-cell .p-change { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -566,10 +643,6 @@
       box-shadow: 0 10px 34px var(--primary-glow);
       padding: 26px 24px;
       align-items: center;
-    }
-    .price-cell.is-primary:hover {
-      box-shadow: 0 16px 44px var(--primary-ring);
-      transform: translateY(-4px);
     }
     .price-cell.is-primary .p-label {
       font-size: 13px; font-weight: 700;
@@ -610,6 +683,34 @@
     .chart-wrap { position: relative; height: 480px; }
     @media (max-width: 768px) { .chart-wrap { height: 380px; } }
 
+    /* 图表降级空态：ECharts 没能加载 / 渲染抛错时顶替画布位置。
+       用虚线框和「暂时无法显示」明确表态，不要留一块看不出所以然的空白。 */
+    .chart-fallback {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px; padding: 20px; text-align: center;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--th-bg);
+    }
+    .chart-fallback .cf-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .chart-fallback .cf-desc {
+      font-size: 13px; color: var(--sub);
+      max-width: 420px; line-height: 1.75;
+    }
+
+    /* 无 JS 提示（只有 <noscript> 里那份标记会渲染出来）*/
+    .nojs-note {
+      background: var(--amber-light);
+      color: var(--flat-fg);
+      border: 1px solid var(--amber);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
     /* 柱状图自定义图例：颜色表达涨跌，宽度区分油品 */
     .chart-legend {
       display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px;
@@ -624,7 +725,27 @@
     .chart-legend .lg-hint { opacity: .8; }
 
     /* ===== TABLE ===== */
-    .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    /* 横向滚动容器默认不可聚焦，键盘用户没法滚。
+       由 JS 在检测到「真的溢出」时才补 tabindex/role —— 不溢出就不进 Tab 序列。 */
+    .tbl-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      position: relative;
+    }
+    .tbl-wrap:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+    /* 右缘渐隐：可滚动时提示「右边还有内容」，滚到尾部自动消失。
+       状态由 syncTableScrollHint() 维护。 */
+    .tbl-wrap::after {
+      content: '';
+      position: absolute; top: 0; right: 0; bottom: 0;
+      width: 28px;
+      pointer-events: none;
+      background: linear-gradient(to right, transparent, var(--card));
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .tbl-wrap.is-scrollable::after { opacity: 1; }
+    .tbl-wrap.at-end::after { opacity: 0; }
     .th-sub { display: block; margin-top: 2px; font-size: 11px; font-weight: 400; opacity: .75; }
 
     /* ===== SKELETON SHIMMER ===== */
@@ -702,7 +823,6 @@
       background: var(--blue);
       transition: transform .3s;
     }
-    .tl-item:hover .tl-dot { transform: scale(1.3); }
     .tl-item.up .tl-dot   { box-shadow: 0 0 0 3px var(--red),    0 0 8px color-mix(in srgb, var(--red) 40%, transparent);   background: var(--red); }
     .tl-item.down .tl-dot { box-shadow: 0 0 0 3px var(--green),  0 0 8px color-mix(in srgb, var(--green) 40%, transparent); background: var(--green); }
     .tl-item.flat .tl-dot { box-shadow: 0 0 0 3px var(--amber),  0 0 8px color-mix(in srgb, var(--amber) 40%, transparent); background: var(--amber); }
@@ -726,7 +846,7 @@
       border-radius: var(--radius);
       padding: 24px;
       box-shadow: var(--shadow-sm);
-      transition: var(--transition);
+      transition: var(--transition-ui);
       position: relative;
       overflow: hidden;
     }
@@ -736,8 +856,6 @@
       background: var(--ic-accent);
       transition: var(--transition);
     }
-    .impact-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
-    .impact-card:hover::before { width: 6px; }
     .impact-card.n1 { --ic-accent: var(--red); }
     .impact-card.n2 { --ic-accent: var(--amber); }
     .impact-card.n3 { --ic-accent: var(--green); }
@@ -790,7 +908,7 @@
 
     /* ===== THEME SWITCH（三选一分段控件：点哪个应用哪个）===== */
     .theme-switch {
-      position: fixed; top: 16px; right: 16px; z-index: 1000;
+      position: fixed; top: 16px; right: 16px; z-index: var(--z-chrome);
       display: flex; align-items: center; gap: 2px;
       padding: 3px;
       border-radius: 999px;
@@ -820,13 +938,38 @@
     /* 焦点环画在按钮内侧，避免被分段容器裁掉 */
     .ts-btn:focus-visible { outline: 2px solid var(--toggle-fg); outline-offset: -2px; }
 
+    /* ===== HOVER（只对有精确指针的设备生效）=====
+       触屏没有真正的 hover：tap 之后 :hover 会一直粘着，
+       卡片「浮起」就再也不落回去。以前全站 hover 都没做能力判断，
+       所以这里统一关进媒体查询，而不是散落在各组件里。 */
+    @media (hover: hover) and (pointer: fine) {
+      .hero-stat:hover {
+        background: rgba(255,255,255,.1);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,.3);
+      }
+      .hero-stat.is-primary:hover {
+        background: color-mix(in srgb, var(--ser-95) 28%, rgba(255,255,255,.08));
+        box-shadow: 0 12px 34px color-mix(in srgb, var(--ser-95) 32%, transparent);
+      }
+      .card:hover { box-shadow: var(--shadow-lg); }
+      .price-cell:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+      .price-cell.is-primary:hover {
+        box-shadow: 0 16px 44px var(--primary-ring);
+        transform: translateY(-4px);
+      }
+      .impact-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+      .impact-card:hover::before { width: 6px; }
+      .tl-item:hover .tl-dot { transform: scale(1.3); }
+    }
+
     /* ===== FOCUS ===== */
     :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
     .hero :focus-visible { outline-color: #93c5fd; }
 
     /* ===== BACK TO TOP ===== */
     .back-top {
-      position: fixed; bottom: 28px; right: 28px; z-index: 999;
+      position: fixed; bottom: 28px; right: 28px; z-index: var(--z-float);
       width: 44px; height: 44px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       background: var(--blue); color: #fff; border: none; cursor: pointer;
@@ -840,7 +983,9 @@
     .back-top:hover { background: var(--blue-strong); }
 
     /* ================================================================
-       RESPONSIVE —— 全站仅两个断点：768（平板） / 640（手机）
+       RESPONSIVE —— 1100（栅格） / 768（表格图表） / 640（手机） / 480（窄屏）
+       本区必须留在样式表末尾：.price-cell / .hero-stat 的基础规则
+       写在前面，媒体查询不提特异性，靠后才会生效。
        ================================================================ */
     @media (max-width: 768px) {
       .data-table { font-size: 12px; }
@@ -850,18 +995,51 @@
     @media (max-width: 640px) {
       .hero { padding: 48px 16px 40px; min-height: auto; }
       .hero h1 { font-size: 26px; }
-      .hero-stats { gap: 12px; }
-      .hero-stat { padding: 12px 16px; min-width: auto; }
+      /* 2×2：原先 4 张卡挤一行，实宽 82/71/58/157，第 4 张还会单独折到下一行 */
+      .hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .hero-stat { padding: 12px 14px; }
       .card { padding: 20px; }
       .section-title { font-size: 18px; }
+      .price-cell { padding: 12px 6px; }
+      .price-cell .p-label { font-size: 10px; letter-spacing: 0; }
       .price-cell .p-value { font-size: 22px; }
+      .price-cell:not(.is-primary) .p-value { font-size: 20px; }
+      .price-cell .p-change { font-size: 11px; }
+      .qstat { padding: 16px 18px; }
       .qstat .value { font-size: 26px; }
+      /* 5 张卡在 2 列下会剩 1 张孤占半行 → 让第 5 张铺满整行 */
       .quick-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .quick-stats .qstat,
+      .quick-stats .qstat:nth-child(4) { grid-column: span 1; }
+      .quick-stats .qstat:nth-child(5) { grid-column: span 2; }
       .chart-wrap { height: 320px; }
       .impact-grid { grid-template-columns: 1fr; }
-      .theme-switch { top: 10px; right: 10px; padding: 2px; gap: 1px; }
-      .ts-btn { width: 28px; height: 28px; }
+      .theme-switch { top: 10px; right: 10px; padding: 3px; gap: 1px; }
+      .ts-btn { width: 30px; height: 30px; }
       .ts-btn .ic { width: 16px; height: 16px; }
+      /* 「汽油 元/吨」与 95#/92# 的「元/升」是同一轮调价的两种口径，
+         手机上先保住元/升，砍掉这列可少滚约 70px */
+      .data-table thead th:nth-child(4),
+      .data-table tbody td:nth-child(4) { display: none; }
+    }
+
+    /* 极窄屏：iPhone SE(375) / 小屏安卓(360) 这一档此前完全没有覆盖 */
+    @media (max-width: 480px) {
+      .hero { padding: 40px 14px 32px; }
+      .hero h1 { font-size: 23px; }
+      .hero-stat .val { font-size: 26px; }
+      .hero-stat.is-primary .val { font-size: 28px; }
+      .card { padding: 16px; }
+      .qstat { padding: 14px 16px; }
+      .qstat .value { font-size: 24px; }
+      .price-cell.is-primary { padding: 20px 14px; }
+      .price-cell.is-primary .p-value { font-size: 46px; }
+      .data-table { font-size: 11px; }
+      .data-table thead th,
+      .data-table tbody td { padding: 7px 5px; }
+      /* 轮次可由日期推断，窄屏再让出一列 */
+      .data-table thead th:nth-child(1),
+      .data-table tbody td:nth-child(1) { display: none; }
     }
 
     /* ===== REDUCED MOTION ===== */
@@ -950,8 +1128,20 @@
       .hero, footer {
         -webkit-print-color-adjust: exact; print-color-adjust: exact;
       }
+      /* 打印时 hero 不必占满 A4：min-height:560px 会白白吃掉大半页 */
+      .hero { min-height: auto !important; padding: 24px 20px !important; }
     }
   </style>
+  <noscript>
+    <style>
+      /* 无 JS 兜底：滚动显影全靠脚本加 .visible，脚本不执行时
+         页面会整体停在 opacity:0（不是「没数据」，是「什么都看不见」）。
+         这里直接把显影状态置满，至少让静态框架和已有文案可读。 */
+      .reveal, .tl-item { opacity: 1 !important; transform: none !important; }
+      .hero-photo { opacity: 1 !important; }
+      .chart-wrap { display: none; }
+    </style>
+  </noscript>
 </head>
 <body>
 
@@ -1105,14 +1295,18 @@
         <div class="lab">下调</div>
       </div>
       <div class="hero-stat is-primary">
-        <div class="val is-amber" id="hero-cumulative">-</div>
-        <div class="lab">95#累计涨跌（元/升）</div>
+        <div class="val is-amber" id="hero-cumulative" title="年内累计涨跌，单位：元/升">-</div>
+        <div class="lab">95#累计涨跌</div>
       </div>
     </div>
   </div>
 </section>
 
 <div class="container">
+
+  <noscript>
+    <div class="nojs-note">本页的油价数据与图表由 JavaScript 渲染，当前脚本未执行。请启用 JavaScript 后刷新以查看完整内容。</div>
+  </noscript>
 
   <!-- ========== 当前油价 ========== -->
   <div class="reveal">
@@ -1131,17 +1325,17 @@
         <div class="p-change skeleton" id="change95">—</div>
         <div class="p-note" id="p95Note">济南多数家用车加注标号</div>
       </div>
-      <div class="price-cell reveal">
+      <div class="price-cell reveal pc-92">
         <div class="p-label">92# 汽油</div>
         <div class="p-value counter skeleton" id="counter92" data-target="0" data-prefix="" data-suffix="">--</div>
         <div class="p-change skeleton" id="change92">—</div>
       </div>
-      <div class="price-cell reveal">
+      <div class="price-cell reveal pc-98">
         <div class="p-label">98# 汽油</div>
         <div class="p-value counter skeleton" id="counter98" data-target="0" data-prefix="" data-suffix="">--</div>
         <div class="p-change skeleton" id="change98">—</div>
       </div>
-      <div class="price-cell reveal">
+      <div class="price-cell reveal pc-diesel">
         <div class="p-label">0# 柴油</div>
         <div class="p-value counter skeleton" id="counterDiesel" data-target="0" data-prefix="" data-suffix="">--</div>
         <div class="p-change skeleton" id="changeDiesel">—</div>
@@ -1449,6 +1643,12 @@ let dataLoadFailed = false;
 let retryBtnAdded = false;
 
 async function init() {
+  // 第一步就把所有滚动显影区块纳入观察 —— 它们只是静态骨架，不依赖任何数据。
+  // 这一步以前放在 init 末尾，结果是：中间任何一处抛错（最典型的就是 ECharts
+  // 没能加载）都会让 observe 永不执行，17 个区块永久 opacity:0，整页变空白。
+  // 「内容能不能被看见」不该排在「图表能不能画出来」后面。
+  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
   let raw;
 
   try {
@@ -1607,15 +1807,12 @@ async function init() {
     // ---- 缓存数据，供主题切换时原地重绘图表 ----
     _chartData = { prices: prices, prices2025: prices2025 };
 
-    // ---- 渲染图表 ----
-    renderMainChart(prices, prices2025);
-    renderBarChart(prices);
-
-    // ---- 动态生成时间线 ----
+    // ---- 动态生成时间线：纯 DOM，无外部依赖，先于图表渲染 ----
     generateTimeline(prices, meta.city, PRIMARY, PRIMARY_LABEL);
 
-    // ---- 启动 Reveal 观察 ----
-    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+    // ---- 渲染图表：本站唯一的外部依赖，单独隔离失败 ----
+    // 失败只影响两张图，不再牵连表格、时间轴与滚动显影
+    await renderChartsGuarded(prices, prices2025);
 
     // 加载失败时显示回退提示
     if (dataLoadFailed && !retryBtnAdded) {
@@ -1651,7 +1848,7 @@ function showDataWarning() {
       // 重新走一遍初始化，而不是整页重载
       btn.remove();
       retryBtnAdded = false;
-      init();
+      bootstrap();
     } catch (e) {
       setLabel('仍然失败，稍后再试');
       setTimeout(() => { setLabel('点击重试'); btn.disabled = false; }, 3000);
@@ -1766,7 +1963,43 @@ function renderTable(prices, basePrim, primary) {
       <td style="font-weight:700;color:${cumColor}">${cumStr}</td>
     </tr>`;
   }).join('');
+
+  // 渲染完立刻同步一次滚动提示（scrollWidth 在 DOM 更新后同步可读）
+  syncTableScrollHint();
 }
+
+// 表格横向滚动提示：只有真的溢出时，才让容器可聚焦、才显示右缘渐隐。
+// 溢出却不可聚焦 = 键盘用户永远滚不到右边那几列（WCAG 2.1.1）。
+function syncTableScrollHint() {
+  const w = document.querySelector('.tbl-wrap');
+  if (!w) return;
+  const canScroll = w.scrollWidth - w.clientWidth > 1;
+  w.classList.toggle('is-scrollable', canScroll);
+  if (canScroll) {
+    if (!w.hasAttribute('tabindex')) w.setAttribute('tabindex', '0');
+    w.setAttribute('role', 'region');
+    w.setAttribute('aria-label', '调价记录表，可横向滚动');
+  } else {
+    w.removeAttribute('tabindex');
+    w.removeAttribute('role');
+    w.removeAttribute('aria-label');
+  }
+  // 滚动监听只绑一次，用 dataset 打标，避免重复渲染时层层叠加
+  if (!w.dataset.hintBound) {
+    w.dataset.hintBound = '1';
+    w.addEventListener('scroll', () => {
+      w.classList.toggle('at-end', w.scrollLeft + w.clientWidth >= w.scrollWidth - 2);
+    }, { passive: true });
+  }
+  w.classList.toggle('at-end', w.scrollLeft + w.clientWidth >= w.scrollWidth - 2);
+}
+
+// 视口变化后表格是否还溢出，会变（横竖屏切换最明显）
+let _tblHintTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_tblHintTimer);
+  _tblHintTimer = setTimeout(syncTableScrollHint, 150);
+}, { passive: true });
 
 // ============ 走势图 (ECharts) ============
 // ============ 图表主题（色值全部来自 CSS 令牌，JS 不再写死任何颜色）============
@@ -1812,6 +2045,55 @@ function getChartTheme() {
     onAccent: cssVar('--hero-solid', '#0a0f1e'),
   };
   return _chartTheme;
+}
+
+// 图表降级空态：把画布位置换成一则说明，别留一块莫名其妙的空白。
+function renderChartFallback(domId, label) {
+  const el = document.getElementById(domId);
+  if (!el) return;
+  el.innerHTML =
+    '<div class="chart-fallback">' +
+      '<div class="cf-title">' + label + '暂时无法显示</div>' +
+      '<div class="cf-desc">图表库未能加载，可能是网络或 CDN 问题。' +
+      '本页的价格数据、表格与分段影响分析不受影响，刷新页面可重试。</div>' +
+    '</div>';
+}
+
+// 图表渲染的唯一入口 —— 把「外部依赖」关在这个函数里。
+// 两条失败路径都只做降级，绝不向外抛：
+//   ① 库没到（两个 CDN 都失败）② 库到了但某张图渲染抛错
+// 一旦异常冒泡到 init()，它后面的代码就全部作废（见 init 开头的注释）。
+async function renderChartsGuarded(prices, prices2025) {
+  let ready = false;
+  try {
+    ready = await (window.__echartsReady || Promise.resolve(false));
+  } catch (e) {
+    ready = false;
+  }
+
+  if (!ready || typeof window.echarts === 'undefined') {
+    console.warn('[FPT] ECharts 未能加载，图表已降级为空态');
+    renderChartFallback('mainChart', '价格走势图');
+    renderChartFallback('barChart', '调价幅度图');
+    return false;
+  }
+
+  try {
+    renderMainChart(prices, prices2025);
+    renderBarChart(prices);
+    return true;
+  } catch (err) {
+    console.warn('[FPT] 图表渲染失败，已降级为空态:', err);
+    // 半渲染的实例要先销毁，否则 canvas 会残留在 fallback 文案下面
+    [ _mainChartInst, _barChartInst ].forEach(function (inst) {
+      try { if (inst && !inst.isDisposed()) inst.dispose(); } catch (e) {}
+    });
+    _mainChartInst = null;
+    _barChartInst = null;
+    renderChartFallback('mainChart', '价格走势图');
+    renderChartFallback('barChart', '调价幅度图');
+    return false;
+  }
 }
 
 // 主题切换 / 数据更新后重绘图表（替代原先的整页重载）
@@ -1879,6 +2161,17 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 });
 applyTheme(_themeMode, false);
 
+// 图表左右内边距按容器宽度收缩。
+// grid.left/right 是固定 px，360px 屏上 55+40=95 会吃掉 26% 的绘图区
+// （实测绘图区占比从 0.90 掉到 0.65，22 个日期标签挤在 177px 里）。
+function chartSidePad(w) {
+  if (w < 420) return { left: 44, right: 10 };
+  if (w < 700) return { left: 48, right: 14 };
+  return { left: 55, right: 40 };
+}
+// 触摸设备上的 dataZoom 滑块：12px 太细，手指很难按住
+function chartZoomHeight(w) { return w < 700 ? 22 : 12; }
+
 function renderMainChart(prices, prices2025) {
   const t = getChartTheme();
   const chartDom = document.getElementById('mainChart');
@@ -1886,6 +2179,7 @@ function renderMainChart(prices, prices2025) {
   // 不用内置 'dark' 主题：它自带偏紫底色，与卡片底色不一致；改为完全自控
   const chart = echarts.init(chartDom, null);
   _mainChartInst = chart;
+  const boxW = chartDom.clientWidth || 900;
 
   const labels = prices.map(d => formatDate(d.date));
   const allPrices = [...prices.map(d=>d.p92), ...prices.map(d=>d.p95), ...prices.map(d=>d.p98), ...prices.map(d=>d.pDiesel)];
@@ -1964,7 +2258,7 @@ function renderMainChart(prices, prices2025) {
       textStyle: { fontSize: 12, color: t.axisLabel },
       itemWidth: 20, itemHeight: 3
     },
-    grid: { left: 55, right: 40, top: 52, bottom: 58 },
+    grid: Object.assign({ top: 52, bottom: 58 }, chartSidePad(boxW)),
     toolbox: {
       right: 10, top: 0,
       iconStyle: { borderColor: t.iconColor },
@@ -1973,7 +2267,7 @@ function renderMainChart(prices, prices2025) {
       }
     },
     dataZoom: [
-      { type: 'slider', bottom: 8, height: 12, borderColor: 'transparent', backgroundColor: t.dataZoomBg, fillerColor: t.dataZoomFill, handleStyle: { color: t.handle }, textStyle: { color: t.axisLabel } },
+      { type: 'slider', bottom: 8, height: chartZoomHeight(boxW), borderColor: 'transparent', backgroundColor: t.dataZoomBg, fillerColor: t.dataZoomFill, handleStyle: { color: t.handle }, textStyle: { color: t.axisLabel } },
       { type: 'inside' }
     ],
     xAxis: {
@@ -2043,6 +2337,7 @@ function renderBarChart(prices) {
   if (_barChartInst) _barChartInst.dispose();
   const chart = echarts.init(chartDom, null);
   _barChartInst = chart;
+  const boxW = chartDom.clientWidth || 900;
   const labels = prices.map(d => formatDate(d.date));
 
   // 颜色: 红=上调, 绿=下调, 灰=搁浅；圆角朝向随正负翻转（正→上圆角，负→下圆角）
@@ -2093,14 +2388,14 @@ function renderBarChart(prices) {
       }
     },
     legend: { show: false },
-    grid: { left: 55, right: 20, top: 34, bottom: 58 },
+    grid: Object.assign(chartSidePad(boxW), { top: 34, bottom: 58, right: boxW < 700 ? 12 : 20 }),
     toolbox: {
       right: 10, top: 5,
       iconStyle: { borderColor: t.iconColor },
       feature: { saveAsImage: { title: '保存图片', name: '济南成品油调价幅度', pixelRatio: 2 } }
     },
     dataZoom: [
-      { type: 'slider', bottom: 8, height: 12, borderColor: 'transparent', backgroundColor: t.dataZoomBg, fillerColor: t.dataZoomFill, handleStyle: { color: t.handle }, textStyle: { color: t.axisLabel } },
+      { type: 'slider', bottom: 8, height: chartZoomHeight(boxW), borderColor: 'transparent', backgroundColor: t.dataZoomBg, fillerColor: t.dataZoomFill, handleStyle: { color: t.handle }, textStyle: { color: t.axisLabel } },
       { type: 'inside' }
     ],
     xAxis: {
@@ -2324,11 +2619,16 @@ function generateTimeline(prices, city, primary, label) {
 }
 
 // ============ 启动 ============
-// 等待 DOMContentLoaded 确保 defer 脚本（ECharts CDN）已加载就绪
+// ECharts 由 head 里的双源 loader 异步加载，init 内部 await，不再阻塞启动。
+// init 是 async 函数，抛错若不接住就是「静默失败」：页面少一块内容，
+// 控制台却干干净净。这里统一留日志，便于排查。
+function bootstrap() {
+  init().catch(function (err) { console.error('[FPT] 初始化失败:', err); });
+}
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', bootstrap);
 } else {
-  init();
+  bootstrap();
 }
 
 // ============ PWA Service Worker ============
